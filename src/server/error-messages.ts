@@ -77,6 +77,10 @@ export const reasonMessages: Record<string, string> = {
   ORDER_NOT_FOUND: "Pesanan tidak ditemukan.",
   ORDER_NOT_CANCELLABLE: "Pesanan ini tidak dapat dibatalkan lagi.",
   INVALID_SERVICE_TRANSITION: "Perubahan status layanan tidak valid.",
+  CANNOT_MODERATE_SELF: "Anda tidak dapat memoderasi akun sendiri.",
+  FREELANCER_NOT_FOUND: "Profil freelancer tidak ditemukan.",
+  INVALID_BLOCK_REASON: "Alasan blokir wajib diisi dan maksimal 500 karakter.",
+  SERVICE_NOT_FOUND: "Layanan tidak ditemukan.",
 };
 
 export const codeMessages: Record<ErrorCode, string> = {

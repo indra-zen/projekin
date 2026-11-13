@@ -37,6 +37,11 @@ const items: { href: Route; label: string; icon: typeof LayoutDashboard }[] = [
     label: "Layanan saya",
     icon: BriefcaseBusiness,
   },
+  {
+    href: "/dashboard/portfolio" as Route,
+    label: "Portofolio",
+    icon: BriefcaseBusiness,
+  },
   { href: "/dashboard/jobs", label: "Lowongan saya", icon: Megaphone },
   { href: "/dashboard/proposals", label: "Proposal saya", icon: FileText },
   { href: "/dashboard/orders", label: "Pesanan", icon: ClipboardList },

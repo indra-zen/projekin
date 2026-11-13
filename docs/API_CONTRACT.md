@@ -169,7 +169,7 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `submitStudentVerification` / `reviewStudentVerification` | `submitVerificationAction` / `reviewVerificationAction` (`verification.ts`) | `validUntil` (date) is sent to the RPC as end of day Asia/Jakarta |
 | `getStudentDocumentUrl` | — (not an action) | The admin detail page creates the 60 s signed URL server-side with the admin's own session. |
 | `updateFreelancerProfile` | `updateFreelancerProfileAction` (`verification.ts`) | `skills` is submitted as a comma-separated string |
-| portfolio actions | not yet implemented | Next phase |
+| portfolio actions | `src/server/actions/portfolio.ts` | Implemented with owner checks, HTTPS validation, storage path validation, and 5-image limit |
 | `createJob` / `updateJob` / `closeJob` | `createJobAction` / `updateJobAction` / `closeJobAction` (`jobs.ts`) | Jobs also take `requirements`. Create and update redirect to `/dashboard/jobs/{id}`. |
 | `submitProposal` / `withdrawProposal` | `submitProposalAction` / `withdrawProposalAction({ proposalId })` | `submitProposalAction` uses `guardVerifiedFreelancer()` (database state) before the RPC |
 | `rejectProposal` / `acceptProposal` | `rejectProposalAction` / `acceptProposalAction` | Accept redirects to `/dashboard/orders/{orderId}` |
@@ -202,7 +202,7 @@ Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, 
 | `reviewStudentVerification` | admin | `z.discriminatedUnion('decision', [ { decision: 'approve', verificationId, validUntil: z.iso.datetime() }, { decision: 'reject', verificationId, reason: text(1,500) } ])` | `{ verification }` | RPC `review_student_verification` | `INVALID_STATE`/`NOT_PENDING`, `VALIDATION_ERROR`/`VALID_UNTIL_OUT_OF_RANGE` · `/admin/verifications` |
 | `getStudentDocumentUrl` | user (owner) or admin | `{ verificationId }` | `{ url, expiresIn: 60 }` | Read row (RLS) → `storage.from('student-documents').createSignedUrl(path, 60)` with the user client | `NOT_FOUND` |
 
-### 4.4 Freelancer profile and portfolio (`actions/freelancer.ts`)
+### 4.4 Freelancer profile and portfolio (`actions/freelancer.ts`) — Implemented
 
 | Action | Auth | Input | Output | Backing | Revalidates |
 |---|---|---|---|---|---|

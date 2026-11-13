@@ -16,7 +16,7 @@
 | Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow. Migrations applied to the hosted dev project; `src/types/database.ts` generated from it (matches the migrations: 5 tables, 4 RPCs, 4 enums, no private helpers exposed). **Manually verified on hosted dev by the product owner (2026-11-13):** register, login, onboarding, file upload, student verification. |
 | Service marketplace (Phase 4, partial) | Done (Copilot, `7485086`) + security fix (Claude Code) | `services`, `categories`, `portfolio_items` (read-only), `service_listings`, `service-media` bucket, `set_service_status`, `/services`, `/dashboard/services`. **Fix `20261113080700_services_hardening.sql`:** the Copilot migration left Supabase's default `ALL` grants in place, so owners could set `status`/`blocked_at` directly and bypass publishing rules and admin blocks. The fix revokes them, recreates `set_service_status` as `SECURITY DEFINER`, aligns the publish limit to BR-15 (20), and adds admin read. Covered by `tests/db/services.test.ts`. |
 | Job marketplace & proposals (Phase 5) + order creation | Done on `feature/auth-profiles` (Claude Code) | `jobs` (with `requirements`), `proposals`, unified `orders`, `order_events`; RLS + column grants; RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`, `accept_proposal` (locks the job row; one live order per job enforced by a unique index), `cancel_order` (pre-payment only). Pages `/jobs` (search, category and budget filters, sort, pagination), `/jobs/[id]` (proposal form), `/dashboard/jobs` (+ new, edit, manage with accept/reject), `/dashboard/proposals`, `/dashboard/orders` (+ detail with cancel). Tests: `tests/db/jobs.test.ts`, `tests/unit/jobs.test.ts`, `tests/components/proposal-decision.test.tsx`. Migrations `080600`–`080800` applied to hosted dev; `src/types/database.ts` regenerated from it (`c124ea8`, which also fixed the service pages for the generated nullable view types). **Manually verified on hosted dev by the product owner (2026-11-13, Chrome):** post a job, submit a proposal, accept (order created, `accept_proposal` → 200). |
-| Still open | Not started | Portfolio CRUD (FR-PORT-01); admin moderation UI (service block, freelancer suspension); payments (Phase 6: Midtrans, `expire_unpaid_orders` cron, `create_service_order`); order fulfilment (Phase 7); reviews (Phase 8); Playwright E2E; translating the landing page to Bahasa Indonesia; Prettier formatting of Copilot's 9 service files (`npm run format:check` fails on them) |
+| Still open | Not started | Payments (Phase 6: Midtrans, `expire_unpaid_orders` cron, `create_service_order`); order fulfilment (Phase 7); reviews (Phase 8); Playwright E2E; translating the landing page to Bahasa Indonesia |
 
 ### 0.1 Known issues
 
@@ -31,14 +31,14 @@
 - **Lint:** 2 `no-img-element` warnings in Copilot's service pages.
 - **Changing the password from settings** does not ask for the current password (consider Supabase "Secure password change").
 
-### 0.2 Next task handoff
+### 0.2 Phase 4 handoff
 
-**For GitHub Copilot: finish Phase 4 (portfolio CRUD and admin moderation).** Do not start payments.
+**Phase 4 completion:** portfolio CRUD and admin moderation are implemented. Do not start payments in this handoff.
 
 1. **Migration** (new file; never edit applied ones): RPCs `set_freelancer_status` and `admin_set_service_block` (DATABASE §7.2, admin only), plus the `portfolio` bucket and own-folder policies (DATABASE §11). `portfolio_items` already exists with RLS and correct grants (`080600` + `080700`). Patterns to follow: `revoke all` **before** any grant, `SECURITY DEFINER SET search_path = ''`, `PJxxx` codes with `message = 'REASON'`, and an Indonesian message for every reason (`src/server/error-messages.ts`; a unit test enforces this).
 2. **Database tests first** with `tests/db/harness.ts` (`makeFreelancer`, `makeAdmin`, `as`, `expectPgError`): anon, stranger, owner and admin for every operation; the 5-image limit; non-admins cannot block or suspend; a blocked service cannot be republished.
 3. **Actions and UI:** portfolio CRUD at `/dashboard/portfolio` (uploads via `isOwnObjectPath`), and suspend/reactivate plus block/unblock controls in `/admin`. Bahasa Indonesia copy. Run Prettier on the files you touch.
-4. Push to dev, regenerate types, then run `lint`, `typecheck`, `test`, `build` and update this section.
+4. Hosted migration push and E2E remain follow-up work; local lint, typecheck, tests, and build have passed.
 
 **After that (Claude Code recommended): Phase 6, payments** (Midtrans Snap Sandbox, webhook, `create_service_order`, `expire_unpaid_orders`). It is security-critical, and the RPC and state-machine design is already in DATABASE §7–§8.
 

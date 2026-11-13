@@ -932,6 +932,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_freelancer_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["freelancer_status"]
+          p_user_id: string
+        }
+        Returns: Database["public"]["Tables"]["freelancer_profiles"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "freelancer_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_service_block: {
+        Args: {
+          p_blocked: boolean
+          p_reason?: string | null
+          p_service_id: string
+        }
+        Returns: Database["public"]["Tables"]["services"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "services"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_proposal: {
         Args: {
           p_cover_letter: string
