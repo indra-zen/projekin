@@ -1,0 +1,3 @@
+-- CI/local-only test data (docs/DATABASE.md §13).
+-- Reference data (universities, categories) lives in migrations, not here.
+-- Intentionally empty for now: tests create their own fixtures.

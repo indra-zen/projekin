@@ -1,58 +1,169 @@
 import {
   ArrowUpRight,
   BriefcaseBusiness,
-  FolderKanban,
-  Plus,
+  CheckCircle2,
+  Lock,
+  ShoppingBag,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { VerificationBadge } from "@/components/verification/verification-badge";
+import { getCapabilities } from "@/lib/capabilities";
+import { getVerificationStatus, requireOnboarded } from "@/server/auth";
 
-export default function DashboardPage() {
+export const metadata: Metadata = { title: "Dasbor" };
+
+function Capability({
+  allowed,
+  children,
+}: {
+  allowed: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="container py-12 md:py-18">
-      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div>
+    <li className="flex items-center gap-2 text-sm">
+      {allowed ? (
+        <CheckCircle2 className="text-primary size-4 shrink-0" />
+      ) : (
+        <Lock className="text-muted-foreground size-4 shrink-0" />
+      )}
+      <span className={allowed ? "" : "text-muted-foreground"}>{children}</span>
+    </li>
+  );
+}
+
+export default async function DashboardPage() {
+  const viewer = await requireOnboarded("/dashboard");
+  const status = await getVerificationStatus();
+  const state = status?.state ?? "unverified";
+  const caps = getCapabilities({
+    onboarded: viewer.onboarded,
+    verificationState: state,
+    isSuspended: status?.isSuspended ?? false,
+    isAdmin: viewer.isAdmin,
+  });
+  const { profile } = viewer;
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <UserAvatar
+          path={profile.avatar_path}
+          name={profile.full_name}
+          username={profile.username}
+          className="size-14"
+        />
+        <div className="min-w-0">
           <p className="text-primary text-sm font-bold tracking-widest uppercase">
-            Your workspace
+            Ruang kerja Anda
           </p>
-          <h1 className="mt-2 text-4xl font-extrabold tracking-tight">
-            Good morning, there.
+          <h1 className="mt-1 truncate text-3xl font-extrabold tracking-tight">
+            Halo, {profile.full_name}
           </h1>
-          <p className="text-muted-foreground mt-3">
-            Here&apos;s what&apos;s happening with your projects.
-          </p>
+          <Link
+            href={`/u/${profile.username}`}
+            className="text-muted-foreground text-sm hover:underline"
+          >
+            @{profile.username} · lihat profil publik
+          </Link>
         </div>
-        <Button asChild>
-          <Link href="/services">
-            <Plus className="mr-2 size-4" /> Find a service
-          </Link>
-        </Button>
       </div>
-      <div className="mt-10 grid gap-4 sm:grid-cols-3">
-        {[
-          { label: "Active projects", value: "0", icon: FolderKanban },
-          { label: "Saved services", value: "0", icon: BriefcaseBusiness },
-          { label: "Profile views", value: "—", icon: ArrowUpRight },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-card rounded-2xl border p-5">
-            <Icon className="text-primary size-5" />
-            <p className="mt-6 text-3xl font-bold">{value}</p>
-            <p className="text-muted-foreground mt-1 text-sm">{label}</p>
-          </div>
-        ))}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <ShoppingBag className="text-primary size-5" />
+            <CardTitle className="text-lg">Sebagai klien</CardTitle>
+            <CardDescription>
+              Setiap akun dapat memesan jasa dan memposting pekerjaan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <ul className="space-y-2">
+              <Capability allowed={caps.canOrderServices}>
+                Memesan jasa mahasiswa
+              </Capability>
+              <Capability allowed={caps.canPostJobs}>
+                Memposting pekerjaan dan menerima proposal
+              </Capability>
+            </ul>
+            <Button variant="outline" asChild>
+              <Link href="/services">
+                Jelajahi jasa <ArrowUpRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <BriefcaseBusiness className="text-primary size-5" />
+            <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
+              Sebagai freelancer <VerificationBadge state={state} />
+            </CardTitle>
+            <CardDescription>
+              Hanya mahasiswa terverifikasi yang dapat menawarkan jasa dan
+              mengirim proposal.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <ul className="space-y-2">
+              <Capability allowed={caps.canPublishServices}>
+                Mempublikasikan jasa
+              </Capability>
+              <Capability allowed={caps.canSubmitProposals}>
+                Mengirim proposal ke pekerjaan
+              </Capability>
+            </ul>
+            {status?.isSuspended ? (
+              <p className="text-destructive text-sm">
+                Akun freelancer Anda sedang ditangguhkan. Hubungi admin
+                Projekin.
+              </p>
+            ) : null}
+            {caps.canPublishServices ? (
+              <Button variant="outline" asChild>
+                <Link href="/dashboard/freelancer">
+                  Kelola profil freelancer
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href="/dashboard/verification">
+                  {state === "pending"
+                    ? "Lihat status verifikasi"
+                    : "Verifikasi sebagai mahasiswa"}
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      <div className="bg-muted/40 mt-8 rounded-3xl border border-dashed py-20 text-center">
-        <h2 className="text-2xl font-bold">Your workspace is ready</h2>
-        <p className="text-muted-foreground mx-auto mt-3 max-w-md">
-          Once you start exploring, your projects and saved services will appear
-          here.
-        </p>
-        <Button variant="outline" className="mt-6" asChild>
-          <Link href="/services">
-            Explore services <ArrowUpRight className="ml-2 size-4" />
-          </Link>
-        </Button>
-      </div>
+
+      {caps.canReviewVerifications ? (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Admin</CardTitle>
+            <CardDescription>
+              Tinjau pengajuan verifikasi mahasiswa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" asChild>
+              <Link href="/admin/verifications">Buka antrean verifikasi</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

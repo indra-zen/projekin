@@ -8,23 +8,13 @@
 
 ---
 
-## 0. Foundation handoff status
+## 0. Implementation status
 
-The initial application foundation is implemented in the repository:
-
-- Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui configuration,
-  shared layout/navigation, responsive landing page, and placeholder routes.
-- Supabase browser, server, and session-refresh clients with validated public
-  environment variables.
-- ESLint flat config, Prettier configuration, and scripts for development,
-  linting, formatting, type checking, and production builds.
-
-The remaining Phase 0 items below are intentionally deferred to the next
-milestone: Vitest/Testing Library and Playwright setup, GitHub Actions CI,
-Supabase CLI configuration, database type generation, Indonesian UI/error
-baseline, stricter `tsconfig` flags, the server/client environment module
-split with the Midtrans production guard, and the complete shadcn/ui component
-set. No business logic or database schema has been added.
+| Milestone | Status | Notes |
+|---|---|---|
+| Foundation (Phase 0 subset) | Done (Copilot, `46b1093`) | Next.js 16, strict TS, Tailwind, shadcn/ui config, layout, placeholder pages |
+| Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow |
+| Still open from Phases 0–3 | Not started | Portfolio (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, generated DB types (needs the linked dev project), translating the pre-existing landing, `/services` and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
 
 ---
 
@@ -224,12 +214,15 @@ Exit: all CI checks green. The QA checklist passes on production (sandbox). Know
 |---|---|---|---|
 | Static | `tsc --noEmit`, ESLint | Types, banned patterns (admin client imports, `dangerouslySetInnerHTML`) | Every push |
 | Unit | Vitest | Pure logic: Zod schemas, signature, status map, Snap body builder, formatting, safe redirect, error mapping, env guard | Every push |
-| Database | pgTAP via `supabase test db` | RLS matrix, column grants, storage policies, every RPC (happy path + wrong actor + wrong state + limits), constraints, cron functions | Every push (CI ephemeral stack). Optionally locally against dev with `pg_prove` (P2a). |
+| Database | Vitest + **PGlite** (`tests/db`): real migrations on embedded Postgres with a Supabase shim | RLS matrix, column grants, storage policies, every RPC (happy path + wrong actor + wrong state + limits), constraints | Every push, and locally (no Docker needed). CI additionally applies the migrations to a real Supabase stack (`migrations` job). |
 | Integration | Vitest + CI ephemeral Supabase stack | Route handlers called as functions with `Request` objects. Actions' auth and validation behaviour. Real user JWTs from seeded users. Midtrans HTTP mocked by stubbing `fetch`. | Every push |
 | E2E | Playwright | Journeys J1–J10 against `next build && next start` + CI ephemeral Supabase stack. Payment simulated by a service-role fixture. | PRs to `main` |
 | Sandbox E2E | Playwright `@sandbox` tag + manual | Real Snap popup and sandbox payment methods | Manual before release |
 
 ### 4.2 Database test conventions
+
+> **Decision (2026-11-13):** database tests are written in TypeScript (Vitest) against PGlite instead of pgTAP. They run in the dev container without Docker, which satisfies "run relevant tests" locally. `tests/db/harness.ts` provides `createTestDb()` (shim + every migration), `as(db, actor, fn)` (impersonates `anon`/`authenticated`/`service_role` with JWT claims, like PostgREST) and `expectPgError()`. The shim mimics Supabase's default grants, so tests also prove that the migrations revoke them. **Limitation:** the shim is not Supabase. The CI `migrations` job is the check that the SQL applies on real Supabase. The conventions below still apply, with "pgTAP file" read as "Vitest file in `tests/db`".
+
 
 - One file per area: `supabase/tests/rls_<table>.test.sql`, `rpc_<function>.test.sql`, `storage.test.sql`, `structure.test.sql`.
 - Each test runs in a transaction (`begin; select plan(n); … select * from finish(); rollback;`).
@@ -351,4 +344,7 @@ This section records the review of the five documents for contradictions and mis
 | 2026-11-13 | Database environment: hosted supabase.com (dev + prod) instead of a local Docker stack. CI uses an ephemeral local stack. | ARCHITECTURE §4, §14; DATABASE §13, §14; IMPLEMENTATION_PLAN §2, §3, §4.4, §6.3 |
 | 2026-11-13 | Q1: UI in Bahasa Indonesia (NFR-11) | PRD; ARCHITECTURE §3, §11.6; API_CONTRACT §7; IMPLEMENTATION_PLAN Phase 0/2 |
 | 2026-11-13 | Q3: transactional email excluded from MVP (not "easy": needs provider, domain and outbox worker) | PRD §4.2, §10.2 |
+| 2026-11-13 | Schema added incrementally per phase (identity first) instead of the whole schema in Phase 1 | DATABASE §14 |
+| 2026-11-13 | Account-level verification states `unverified/pending/verified/rejected`, derived in SQL (never stored or client-writable) | DATABASE §3, §6.1, §7.2, §8.6 |
+| 2026-11-13 | Forms: Server Actions + `useActionState` (no react-hook-form). DB tests: Vitest + PGlite (no pgTAP). `proxy.ts` replaces the deprecated `middleware.ts`. Route `/register` (existing) instead of `/signup`. | ARCHITECTURE §3, §5; API_CONTRACT §4.0, §5.2; IMPLEMENTATION_PLAN §4 |
 | 2026-11-13 | Q6: seed Tarakan universities, starting with STMIK PPKIA Tarakanita Rahmawati and Universitas Borneo Tarakan, without email domains (document method) until confirmed. Reference data moved into a data migration. Category names in Bahasa Indonesia. | PRD §10.2; DATABASE §4.3, §13, §14 |

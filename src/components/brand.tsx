@@ -5,7 +5,7 @@ export function Brand() {
     <Link
       href="/"
       className="flex items-center gap-2.5"
-      aria-label="Projekin home"
+      aria-label="Beranda Projekin"
     >
       <span className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-xl text-lg font-black">
         P

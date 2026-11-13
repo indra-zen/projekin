@@ -11,18 +11,18 @@ const font = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Projekin — Student talent, real results",
+    default: "Projekin — Talenta mahasiswa, hasil nyata",
     template: "%s — Projekin",
   },
   description:
-    "Find trusted student talent for your next project, or turn your skills into opportunity.",
+    "Temukan talenta mahasiswa tepercaya untuk proyek Anda, atau ubah keahlian Anda menjadi penghasilan.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body className={`${font.variable} antialiased`}>
         <SiteHeader />
         <main>{children}</main>

@@ -154,6 +154,25 @@ Domain schemas (in `src/lib/validation/<domain>.ts`) are named after the action 
 
 Format: **Action** · file · auth · input → output · backing call · notable errors · revalidates.
 
+### 4.0 Implementation status: identity actions (2026-11-13)
+
+The identity actions are implemented in `src/server/actions/*.ts`. Exported names carry an `Action` suffix. Form actions use the React `useActionState` signature `(prev: FormState, formData: FormData) => Promise<FormState>`, where `FormState<T> = ActionResult<T> | null`. On failure the result also carries `values` (submitted values minus passwords) so forms can be refilled.
+
+| Contract name (below) | Export | Notes |
+|---|---|---|
+| `signUp` | `registerAction` (`auth.ts`) | Also takes `fullName` (stored in user metadata, then copied to the profile by the sign-up trigger). Redirects to `/onboarding` if the project returns a session (email confirmation disabled). |
+| `signIn` / `signOut` | `loginAction` / `logoutAction` | |
+| `requestPasswordReset` / `updatePassword` | `forgotPasswordAction` / `resetPasswordAction` | `updatePassword` requires `confirmPassword` |
+| `completeOnboarding` | `completeOnboardingAction` (`profile.ts`) | |
+| `updateProfile` | `updateProfileAction` | `avatarPath` is **not** part of this action. See the avatar actions below. |
+| — | `updateAvatarAction({ path })`, `removeAvatarAction()` | The path must match `{uid}/{uuid}.{jpg,png,webp}`. The previous object is removed (best effort). |
+| `submitStudentVerification` / `reviewStudentVerification` | `submitVerificationAction` / `reviewVerificationAction` (`verification.ts`) | `validUntil` (date) is sent to the RPC as end of day Asia/Jakarta |
+| `getStudentDocumentUrl` | — (not an action) | The admin detail page creates the 60 s signed URL server-side with the admin's own session. |
+| `updateFreelancerProfile` | `updateFreelancerProfileAction` (`verification.ts`) | `skills` is submitted as a comma-separated string |
+| portfolio actions | not yet implemented | Next phase |
+
+Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
+
 ### 4.1 Auth (`actions/auth.ts`)
 
 | Action | Auth | Input | Output | Backing | Errors |
@@ -300,7 +319,7 @@ Invalid params fall back to their defaults (`safeParse`). They never produce an 
 | Route | Auth | Data |
 |---|---|---|
 | `/` | public | Latest 8 published services, latest 8 open jobs, categories |
-| `/login`, `/signup`, `/forgot-password` | public (signed-in users are redirected to `/dashboard`) | — |
+| `/login`, `/register`, `/forgot-password` | public (signed-in users are redirected to `/dashboard`) | — |
 | `/reset-password` | user (recovery session from `/auth/confirm`) | — |
 | `/terms`, `/privacy` | public | Static content (PRD Q5) |
 | `/services` | public | `service_listings` view (RLS of `services` applies). `servicesSearch`. Total count (`count: 'exact'`). |

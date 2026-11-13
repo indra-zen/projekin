@@ -77,6 +77,10 @@ create type public.payout_status       as enum ('none', 'pending', 'paid');
 create type public.dispute_status      as enum ('open', 'resolved');
 create type public.dispute_resolution  as enum ('release_to_freelancer', 'refund_client');
 create type public.review_role         as enum ('client', 'freelancer');  -- role of the REVIEWER
+
+-- Account-level student verification state. DERIVED by
+-- private.student_verification_state(uid); never stored, never client-writable (§8.6).
+create type public.student_verification_state as enum ('unverified', 'pending', 'verified', 'rejected');
 ```
 
 ---
@@ -457,6 +461,8 @@ All helpers are `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''`. The
 | `private.is_admin()` | boolean | `EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = auth.uid())` |
 | `private.is_onboarded(uid uuid)` | boolean | `profiles.onboarded_at IS NOT NULL` |
 | `private.is_eligible_freelancer(uid uuid)` | boolean | `EXISTS (freelancer_profiles WHERE user_id = uid AND status = 'active' AND verified_until > now())` (BR-01) |
+| `private.student_verification_state(uid uuid)` | student_verification_state | §8.6 mapping. **Not** granted to API roles; exposed only for the caller through `get_my_verification_status()`. |
+| `private.apply_verification_approval(uid, university_id, valid_until)` | void | Upserts `freelancer_profiles` (`verified_until = greatest(existing, new)`). Called only from the verification RPCs. **Not** granted to API roles. |
 
 ### 6.2 Relationship helpers (avoid RLS recursion)
 
@@ -537,9 +543,10 @@ The `MESSAGE` is a stable machine-readable reason (e.g. `ORDER_NOT_AWAITING_PAYM
 | Function | By | Preconditions → effects |
 |---|---|---|
 | `complete_onboarding(p_full_name text, p_username text, p_accept_terms boolean) → profiles` | A | `p_accept_terms = true`. Username valid and free → sets `full_name`, `username`, `terms_accepted_at`, `onboarded_at`. Idempotent: it can update name or username again later, and `onboarded_at` keeps its first value. |
+| `get_my_verification_status() → table(state, is_suspended, verified_until, university_id, latest_request_id, latest_request_status, latest_rejection_reason, can_submit)` | A | Caller's own account-level state (§8.6) plus the data the verification page needs. `can_submit` = onboarded, no pending request, and not verified beyond the renewal window. |
 | `submit_student_verification(p_university_id uuid, p_method verification_method, p_student_number text DEFAULT NULL, p_document_path text DEFAULT NULL) → student_verifications` | A | Onboarded. No pending request (BR-04, else `PJ409 VERIFICATION_PENDING`). Not currently verified beyond the renewal window (`verified_until > now() + renewal_window` → `PJ409 ALREADY_VERIFIED`). University active. **email_domain:** reads `auth.users.email` and `email_confirmed_at` for `auth.uid()`. If confirmed and `lower(split_part(email,'@',2)) = ANY(email_domains)`, inserts an `approved` row with `valid_until = now() + default_validity` and upserts `freelancer_profiles` (`university_id`, `verified_until = greatest(existing, new)`, status unchanged if the row exists). Otherwise `PJ422 EMAIL_DOMAIN_NOT_ELIGIBLE`. **document:** requires `student_number` and a `document_path` that starts with `auth.uid() || '/'` and exists in `storage.objects` (bucket `student-documents`) → inserts `pending`. |
-| `review_student_verification(p_verification_id uuid, p_decision text, p_valid_until timestamptz DEFAULT NULL, p_reason text DEFAULT NULL) → student_verifications` | A (admin) | `is_admin()`. Row is `pending`. `p_decision IN ('approve','reject')`. **approve:** `now() < p_valid_until <= now() + max_validity` → `approved`, plus upsert `freelancer_profiles` as above. **reject:** `p_reason` required → `rejected`. Sets `reviewed_by` and `reviewed_at`. |
-| `set_freelancer_status(p_user_id uuid, p_status freelancer_status) → freelancer_profiles` | A (admin) | Updates status. Suspension hides services through RLS (BR-05). |
+| `review_student_verification(p_verification_id uuid, p_decision text, p_valid_until timestamptz DEFAULT NULL, p_reason text DEFAULT NULL) → student_verifications` | A (admin) | `is_admin()`. Reviewer is not the requester (`PJ403 CANNOT_REVIEW_OWN`). Row is `pending` (`PJ409 NOT_PENDING`). `p_decision IN ('approve','reject')`. **approve:** `now() < p_valid_until <= now() + max_validity` → `approved`, plus upsert `freelancer_profiles` as above. **reject:** `p_reason` required → `rejected`. Sets `reviewed_by` and `reviewed_at`. |
+| `set_freelancer_status(p_user_id uuid, p_status freelancer_status) → freelancer_profiles` | A (admin) — **not yet implemented** (Phase 4 moderation) | Updates status. Suspension hides services through RLS (BR-05). |
 | `set_service_status(p_service_id uuid, p_status service_status) → services` | A (owner) | Allowed transitions: `draft→published`, `paused→published`, `published→paused`, `draft\|published\|paused→archived`. Publishing requires `is_eligible_freelancer(auth.uid())`, `blocked_at IS NULL`, `cover_image_path IS NOT NULL`, and published count < `max_published_services()`. Sets `published_at` on first publish. |
 | `admin_set_service_block(p_service_id uuid, p_blocked boolean, p_reason text DEFAULT NULL) → services` | A (admin) | Block: sets `blocked_at` and `blocked_reason` (reason required), and moves `published` to `paused`. Unblock: clears both. Status stays paused. |
 | `close_job(p_job_id uuid, p_reason text DEFAULT NULL) → jobs` | A (owner or admin) | Job `open` → `closed`, `closed_at`. All `submitted` proposals → `rejected` (`status_reason = 'job_closed'`). |
@@ -679,7 +686,18 @@ stateDiagram-v2
 
 ### 8.6 Student verification
 
-`pending → approved | rejected` (admin), or `approved` immediately (email_domain). Expiry is derived from `freelancer_profiles.verified_until` and is **not** a status change.
+**Per request** (`student_verifications.status`): `pending → approved | rejected` (admin), or `approved` immediately (email_domain). Expiry is derived from `freelancer_profiles.verified_until` and is **not** a status change.
+
+**Per account** (`student_verification_state`, derived by `private.student_verification_state(uid)`, in this order):
+
+| State | Condition |
+|---|---|
+| `verified` | `is_eligible_freelancer(uid)`: active freelancer profile with `verified_until > now()`. A pending renewal does not change this. |
+| `pending` | Otherwise, a request is `pending` |
+| `rejected` | Otherwise, the **latest** request is `rejected` (the user may re-apply) |
+| `unverified` | Everything else: never applied, verification expired, or suspended (`get_my_verification_status().is_suspended` tells the UI which) |
+
+Users can never write this state: `student_verifications` and `freelancer_profiles` have no INSERT grants, the status/validity columns have no UPDATE grants, and only `review_student_verification` (admin) or the email-domain path of `submit_student_verification` can approve.
 
 ---
 
@@ -765,7 +783,7 @@ Size and MIME limits are set on the bucket (`file_size_limit`, `allowed_mime_typ
 
 | Bucket | SELECT | INSERT | UPDATE / DELETE |
 |---|---|---|---|
-| avatars, portfolio, service-media | public URL (no policy needed) | `folder(1) = uid::text` | `folder(1) = uid::text` |
+| avatars, portfolio, service-media | public URL (no policy needed for viewing). `avatars` also has an own-folder SELECT policy, which the Storage API needs for `remove()`. | `folder(1) = uid::text` | `folder(1) = uid::text` |
 | student-documents | `folder(1) = uid::text OR is_admin()` | `folder(1) = uid::text` | — (immutable evidence) |
 | order-files | `is_order_participant(folder(1)::uuid) OR is_admin()` (via a safe-cast helper) | `can_upload_order_file(name)` | — (immutable evidence) |
 
@@ -819,7 +837,20 @@ Reference data and test data are separated, because development uses a hosted pr
 
 ## 14. Migration plan
 
-Migrations live in `supabase/migrations/` (Supabase CLI, timestamped). They run in this order:
+Migrations live in `supabase/migrations/` (Supabase CLI, timestamped).
+
+**Decision (2026-11-13): the schema is added incrementally, per feature phase**, rather than all at once in Phase 1. Each phase adds its own tables, helpers, policies and RPCs together with their tests, so no SQL lands untested. Applied so far (identity, Phases 1–3 subset):
+
+| File | Contents |
+|---|---|
+| `20261113080000_identity_schemas_and_enums.sql` | `private` schema; enums `verification_method`, `verification_status`, `freelancer_status`, `student_verification_state` |
+| `20261113080100_identity_tables.sql` | profiles, admin_users, universities, student_verifications, freelancer_profiles; `set_updated_at`, `skills_valid`, `handle_new_user` trigger |
+| `20261113080200_identity_helpers_rls_grants.sql` | constants, `is_admin`, `is_onboarded`, `is_eligible_freelancer`, `student_verification_state`, `apply_verification_approval`; grants; RLS policies |
+| `20261113080300_identity_rpc.sql` | `complete_onboarding`, `get_my_verification_status`, `submit_student_verification`, `review_student_verification` |
+| `20261113080400_identity_storage.sql` | buckets `avatars`, `student-documents` and their policies |
+| `20261113080500_reference_data_universities.sql` | Tarakan universities (§13) |
+
+The remaining tables follow this order as their phases arrive:
 
 1. `extensions_and_schemas`: `pg_cron`, the `private` schema, and `private` grants.
 2. `enums`
