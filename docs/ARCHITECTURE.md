@@ -331,7 +331,7 @@ sequenceDiagram
 
 ### 9.4 Return sync
 
-When the Snap popup fires `onSuccess`, `onPending`, `onError` or `onClose`, or the user lands on `?payment=finish`, the order page calls `syncPaymentStatus({orderId})`. The action:
+When the Snap popup fires `onSuccess`, `onPending`, `onError` or `onClose`, or the user lands on `?payment=finish`, the order page calls `syncPaymentStatus({orderId})`. While an attempt is `pending`, the page also checks once on load and again whenever the user returns to the tab (`focus`/`visibilitychange`, at most every 5 s), because VA payments and GoPay on phones are completed outside Snap and Snap does not report them. The action:
 
 1. Authorizes the caller as the order client (user client reads the order).
 2. Finds the latest attempt with status `initiated`/`pending` (or the most recent attempt).

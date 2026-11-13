@@ -73,8 +73,16 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
    ```
 
 7. **Payments (Midtrans Snap Sandbox).** No real money moves.
-   - Locally there is no public webhook URL. After paying in the Snap popup (or when you return to the order page), the page asks the Midtrans Status API server-side and updates the order. "Periksa status pembayaran" on the order page does the same.
-   - To pay a Virtual Account or QRIS in the sandbox, use the Midtrans **Payment Simulator** linked from the current Midtrans Sandbox testing docs, with the VA number or QR shown in Snap.
+   - Locally there is no public webhook URL. After paying, the order page asks the Midtrans Status API server-side: when Snap reports success, when you come back to the tab, when the page loads, or when you click "Periksa status pembayaran".
+   - Sandbox payments are completed in the Midtrans **Payment Simulator** (the order page has a "Cara membayar di mode Sandbox" guide with links). Verified 2026-11-13 for every enabled method:
+
+     | Method in Snap | How to pay in the sandbox |
+     |---|---|
+     | QRIS, GoPay QRIS, ShopeePay QRIS (desktop) | Right-click the QR → copy image address → [QRIS simulator](https://simulator.sandbox.midtrans.com/v2/qris/index) → paste into "QR Code Image Url" → Scan QR → Pay → PIN `123456` → Confirm if asked. Snap then shows "Payment successful". |
+     | GoPay / ShopeePay (phone) | "Pay now" opens the simulator. GoPay: Pay. ShopeePay: PIN `123456` → Confirm. Then return to the order page (GoPay's simulator does not redirect back). |
+     | BCA, BNI, BRI, Permata, CIMB VA | Copy the VA number → the bank's simulator ([BCA](https://simulator.sandbox.midtrans.com/bca/va/index), [BNI](https://simulator.sandbox.midtrans.com/bni/va/index), [BRI](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=bri), [Permata](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=permata), [CIMB](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=cimb)) → Inquire → Pay. Snap does not notice VA payments; return to the order tab. |
+     | Mandiri Bill | [Mandiri simulator](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=mandiri): Snap's *Company code* as Biller Code, the VA number as Bill Key → Inquire → Pay. |
+     | Other banks | Snap issues a BNI VA (bank code 009): use the BNI simulator. |
    - **Deployed environment:** set the Midtrans Sandbox dashboard → Settings → Payment → **Notification URL** to `https://<your-domain>/api/payments/midtrans/notification`. The handler verifies the signature, logs every notification in `payment_notifications`, and applies only what the Status API confirms.
    - Unpaid orders are cancelled automatically 24 h + 15 min after creation by the `expire-unpaid-orders` `pg_cron` job, which the payments migration schedules. A daily Vercel Cron (`vercel.json`) calls `/api/cron/reconcile-payments` with `CRON_SECRET` to heal missed notifications.
 

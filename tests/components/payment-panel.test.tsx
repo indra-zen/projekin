@@ -5,7 +5,9 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -132,5 +134,89 @@ describe("PaymentPanel", () => {
     expect(
       screen.getByRole("button", { name: "Lanjutkan pembayaran" }),
     ).toBeTruthy();
+  });
+
+  it("auto-syncs exactly once under React StrictMode (development)", async () => {
+    mocks.sync.mockResolvedValue({
+      ok: true,
+      data: { orderStatus: "awaiting_payment", paymentStatus: "pending" },
+    });
+    render(
+      <StrictMode>
+        <PaymentPanel
+          orderId={ORDER}
+          clientKey={null}
+          canPay
+          resume
+          hasAttempt
+          autoSync
+        />
+      </StrictMode>,
+    );
+    await waitFor(() => expect(mocks.sync).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(mocks.sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-checks when the user returns to the tab (throttled) and closes Snap once paid", async () => {
+    mocks.sync
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { orderStatus: "awaiting_payment", paymentStatus: "pending" },
+      })
+      .mockResolvedValue({
+        ok: true,
+        data: { orderStatus: "in_progress", paymentStatus: "paid" },
+      });
+    const hide = vi.fn();
+    window.snap = { pay: vi.fn(), hide };
+    render(
+      <PaymentPanel
+        orderId={ORDER}
+        clientKey={null}
+        canPay
+        resume
+        hasAttempt
+        autoSync
+      />,
+    );
+    await waitFor(() => expect(mocks.sync).toHaveBeenCalledTimes(1));
+    expect(hide).not.toHaveBeenCalled();
+
+    // Paid in the bank simulator in another tab, then back here.
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(mocks.sync).toHaveBeenCalledTimes(2));
+    expect(hide).toHaveBeenCalled();
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /Pembayaran terkonfirmasi/,
+    );
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(mocks.sync).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not watch the tab when no payment is pending", async () => {
+    render(
+      <PaymentPanel
+        orderId={ORDER}
+        clientKey={null}
+        canPay
+        resume={false}
+        hasAttempt={false}
+        autoSync={false}
+      />,
+    );
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(mocks.sync).not.toHaveBeenCalled();
+    expect(screen.getByText(/Cara membayar di mode Sandbox/)).toBeTruthy();
   });
 });

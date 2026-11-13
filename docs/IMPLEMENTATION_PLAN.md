@@ -24,7 +24,7 @@
 
 - **Firefox on the product owner's machine did not run the page JavaScript** (the "Terima & rekrut" confirmation needs JS; plain form submissions still worked through progressive enhancement). A stock Firefox 159 (Playwright) and Chrome both run the flow correctly. The console warning "The execution of microtasks on this page was reordered…" also appears in the working Firefox and is harmless. Likely a local extension or setting. Not an app bug, but the JS-only disclosure could be swapped for `<details>` so the step also works without JS (optional hardening).
 - **Not yet manually verified:** reject, withdraw, close job, edit job, and order cancellation (covered by DB and unit tests only).
-- **No full browser payment has been run yet.** Snap creation, the Status API and the webhook were verified live, but nobody has paid an order through the Snap popup and simulator. Run §4.6 items 1–6 (locally items 1 and 2 confirm via return-sync, not the webhook).
+- **Payment methods verified (2026-11-13).** The product owner paid VA orders end to end (§4.6 items 1–5). Claude Code then paid every enabled method in the sandbox simulator with our exact Snap request (QRIS, GoPay QRIS, ShopeePay QRIS on desktop; GoPay and ShopeePay deeplinks on a phone viewport; BCA, BNI, BRI, Permata, CIMB, Mandiri Bill and "other banks" VA) and confirmed each Status API answer (`settlement`, matching order ID, amount) maps to `paid` in our code, and that the Snap.js popup with our client key fires `onSuccess` for QR payments. Notes: QR payments (incl. GoPay/ShopeePay QR) report `payment_type = qris`; Snap does not notice VA payments and GoPay's phone simulator does not redirect back, so the order page re-checks when the user returns to the tab. The steps are in the README and in the order page's sandbox guide.
 - **Webhook needs a public URL.** Locally and on previews the order updates through return-sync ("Periksa status pembayaran", Snap callbacks, `?payment=finish`) and the daily reconcile cron. Set the Midtrans Notification URL once deployed.
 - **Fulfilment is minimal until Phase 7.** The freelancer delivers a message only (no files), and the client can only confirm completion: there is no revision request, dispute or auto-complete yet, so a delivered order waits for the client.
 - **Refunds and payouts are recorded but not yet actionable.** `refund_status='pending'` (late, duplicate, or freelancer-cancelled paid orders) and `payout_status='pending'` (completed orders) are set correctly, but the admin queues and `mark_refund_completed`/`mark_payout_paid` arrive in Phase 9.
@@ -303,12 +303,12 @@ Secrets in CI: none needed for these jobs (the local stack has well-known local 
 
 ### 4.6 Manual sandbox QA checklist
 
-Run against an environment whose Notification URL is configured. Take test card numbers, simulator URLs and OTPs from the **current Midtrans Sandbox testing documentation** at run time; they are not hard-coded here.
+Run against an environment whose Notification URL is configured (locally, return-sync stands in for the webhook). Enabled methods: QRIS, GoPay, ShopeePay and bank VAs (no cards). The simulator steps verified on 2026-11-13 are in the README ("Payments"); re-check the **current Midtrans Sandbox testing documentation** if a simulator page has changed.
 
-1. Service order, card payment success → order `in_progress` (webhook) without refreshing.
-2. Service order, bank transfer VA → pending → pay through the Midtrans simulator → `in_progress`.
+1. Service order, QRIS / GoPay QRIS / ShopeePay QRIS paid in the QRIS simulator → Snap shows success → order `in_progress` without refreshing.
+2. Service order, bank transfer VA → pending → pay through the bank's simulator → return to the tab → `in_progress`.
 3. Close Snap without paying → reopen "Pay" → same token reused.
-4. Card denied → attempt `failed` → retry works.
+4. An attempt expires or fails (e.g. expire it in the Midtrans dashboard) → attempt `expired`/`failed` → "Bayar sekarang" creates a new attempt.
 5. Let an attempt expire (short-window environment or wait) → order auto-cancelled after the grace period.
 6. Job flow: hire → pay → job `filled`, other proposals rejected.
 7. Deliver → revision → deliver → accept → payout pending → admin marks paid.

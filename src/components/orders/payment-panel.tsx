@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SandboxPaymentGuide } from "./sandbox-payment-guide";
 import {
   startPaymentAction,
   syncPaymentStatusAction,
@@ -22,6 +23,7 @@ type SnapApi = {
       onClose?: () => void;
     },
   ) => void;
+  hide?: () => void;
 };
 
 declare global {
@@ -97,6 +99,7 @@ export function PaymentPanel({
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const autoRan = useRef(false);
+  const lastReturnCheck = useRef(0);
 
   const sync = useCallback(async () => {
     if (inFlight.current) return; // at most one sync in flight
@@ -107,6 +110,10 @@ export function PaymentPanel({
       if (result.ok) {
         setError(null);
         setNotice(describe(result.data));
+        // Paid (or no longer payable): close a Snap window that is still open,
+        // e.g. VA instructions after paying in the bank simulator.
+        if (result.data.orderStatus !== "awaiting_payment")
+          window.snap?.hide?.();
         router.refresh();
       } else {
         setError(result.error.message);
@@ -117,11 +124,36 @@ export function PaymentPanel({
     }
   }, [orderId, router]);
 
+  // Check once on load when returning from payment or while an attempt is
+  // pending. The flag is set inside the timer so React StrictMode's
+  // mount → unmount → mount in development does not cancel the only run.
   useEffect(() => {
     if (!autoSync || autoRan.current) return;
-    autoRan.current = true;
-    const timer = window.setTimeout(() => void sync(), 0);
+    const timer = window.setTimeout(() => {
+      autoRan.current = true;
+      void sync();
+    }, 0);
     return () => window.clearTimeout(timer);
+  }, [autoSync, sync]);
+
+  // VA, and GoPay on phones, are paid outside Snap (bank app or sandbox
+  // simulator) and Snap does not notice. Re-check when the user comes back to
+  // this tab, at most every 5 seconds.
+  useEffect(() => {
+    if (!autoSync) return;
+    const onReturn = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastReturnCheck.current < 5_000) return;
+      lastReturnCheck.current = now;
+      void sync();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
+    };
   }, [autoSync, sync]);
 
   function pay() {
@@ -201,6 +233,7 @@ export function PaymentPanel({
         Metode: QRIS, e-wallet (GoPay, ShopeePay) dan Virtual Account bank,
         melalui Midtrans. Mode Sandbox: tidak ada uang sungguhan yang berpindah.
       </p>
+      <SandboxPaymentGuide />
     </div>
   );
 }
