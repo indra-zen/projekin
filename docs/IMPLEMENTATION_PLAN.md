@@ -8,6 +8,26 @@
 
 ---
 
+## 0. Foundation handoff status
+
+The initial application foundation is implemented in the repository:
+
+- Next.js App Router with strict TypeScript, Tailwind CSS, shadcn/ui configuration,
+  shared layout/navigation, responsive landing page, and placeholder routes.
+- Supabase browser, server, and session-refresh clients with validated public
+  environment variables.
+- ESLint flat config, Prettier configuration, and scripts for development,
+  linting, formatting, type checking, and production builds.
+
+The remaining Phase 0 items below are intentionally deferred to the next
+milestone: Vitest/Testing Library and Playwright setup, GitHub Actions CI,
+Supabase CLI configuration, database type generation, Indonesian UI/error
+baseline, stricter `tsconfig` flags, the server/client environment module
+split with the Midtrans production guard, and the complete shadcn/ui component
+set. No business logic or database schema has been added.
+
+---
+
 ## 1. Working agreement
 
 - **Sequential agents.** Claude Code and GitHub Copilot work one at a time. Before starting a phase, an agent reads `CLAUDE.md` and this plan, checks `git status`/`git log`, and confirms that the previous phase's exit criteria are met. It does not assume unfinished work is complete.
