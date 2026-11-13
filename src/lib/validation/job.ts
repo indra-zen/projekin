@@ -87,15 +87,6 @@ export const rejectProposalSchema = z.object({
   reason: optionalText(500, "Alasan"),
 });
 
-export const cancelOrderSchema = z.object({
-  orderId: uuidSchema,
-  reason: z
-    .string()
-    .trim()
-    .min(1, { error: "Alasan pembatalan wajib diisi." })
-    .max(500, { error: "Alasan maksimal 500 karakter." }),
-});
-
 /** /jobs search params. Invalid values fall back to defaults (never an error page). */
 const jobsSearchShape = z.object({
   q: z.string().trim().max(100).catch(""),

@@ -76,6 +76,40 @@ export const reasonMessages: Record<string, string> = {
   // Orders
   ORDER_NOT_FOUND: "Pesanan tidak ditemukan.",
   ORDER_NOT_CANCELLABLE: "Pesanan ini tidak dapat dibatalkan lagi.",
+  INVALID_CANCEL_REASON:
+    "Alasan pembatalan wajib diisi (maksimal 500 karakter).",
+  SERVICE_NOT_AVAILABLE: "Layanan ini sedang tidak dapat dipesan.",
+  OWN_SERVICE: "Anda tidak dapat memesan layanan milik sendiri.",
+  INVALID_REQUIREMENTS: "Kebutuhan pesanan harus 10–5.000 karakter.",
+  SERVICE_ORDER_PENDING:
+    "Anda sudah memiliki pesanan layanan ini yang menunggu pembayaran. Bayar atau batalkan pesanan tersebut di halaman Pesanan.",
+  NOT_ORDER_FREELANCER:
+    "Hanya freelancer pesanan ini yang dapat melakukan tindakan ini.",
+  NOT_ORDER_CLIENT:
+    "Hanya klien pesanan ini yang dapat melakukan tindakan ini.",
+  ORDER_NOT_IN_PROGRESS:
+    "Hasil kerja hanya dapat dikirim saat pesanan sedang dikerjakan.",
+  ORDER_NOT_DELIVERED:
+    "Pesanan hanya dapat diselesaikan setelah freelancer mengirim hasil kerja.",
+  INVALID_MESSAGE: "Pesan wajib diisi (maksimal 5.000 karakter).",
+  TOO_MANY_ATTACHMENTS: "Maksimal 10 lampiran per pengiriman.",
+  ATTACHMENT_NOT_FOUND: "Lampiran tidak ditemukan. Unggah ulang file Anda.",
+  // Payments
+  ORDER_NOT_AWAITING_PAYMENT: "Pesanan ini tidak sedang menunggu pembayaran.",
+  PAYMENT_WINDOW_CLOSING:
+    "Batas waktu pembayaran pesanan ini hampir habis atau sudah lewat, sehingga pembayaran baru tidak dapat dimulai.",
+  PAYMENT_IN_PROGRESS:
+    "Pembayaran sedang disiapkan. Tunggu sebentar lalu coba lagi.",
+  MAX_PAYMENT_ATTEMPTS:
+    "Batas percobaan pembayaran untuk pesanan ini sudah tercapai.",
+  PAYMENT_NOT_FOUND: "Data pembayaran tidak ditemukan.",
+  PAYMENT_NOT_INITIATED: "Pembayaran ini sudah diproses sebelumnya.",
+  INVALID_SNAP_TOKEN: "Gagal menyiapkan pembayaran. Coba lagi.",
+  INVALID_TOKEN_EXPIRY: "Gagal menyiapkan pembayaran. Coba lagi.",
+  PAYMENT_PROVIDER_ERROR:
+    "Layanan pembayaran Midtrans sedang tidak dapat dihubungi. Coba lagi beberapa saat lagi.",
+  PAYMENT_NOT_CONFIGURED:
+    "Pembayaran belum dikonfigurasi di server ini. Hubungi admin.",
   INVALID_SERVICE_TRANSITION: "Perubahan status layanan tidak valid.",
   CANNOT_MODERATE_SELF: "Anda tidak dapat memoderasi akun sendiri.",
   FREELANCER_NOT_FOUND: "Profil freelancer tidak ditemukan.",
@@ -92,6 +126,8 @@ export const codeMessages: Record<ErrorCode, string> = {
   CONFLICT: "Data bertentangan dengan data yang sudah ada.",
   LIMIT_REACHED: "Batas telah tercapai.",
   RATE_LIMITED: "Terlalu banyak percobaan. Coba lagi beberapa saat lagi.",
+  PAYMENT_PROVIDER_ERROR:
+    "Layanan pembayaran sedang tidak dapat dihubungi. Coba lagi beberapa saat lagi.",
   INTERNAL_ERROR: "Terjadi kesalahan. Silakan coba lagi.",
 };
 

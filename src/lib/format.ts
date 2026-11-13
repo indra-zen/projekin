@@ -50,3 +50,11 @@ export function formatOrderCode(orderNumber: number): string {
 export function formatBudgetRange(min: number, max: number): string {
   return min === max ? formatIdr(min) : `${formatIdr(min)} – ${formatIdr(max)}`;
 }
+
+/** Payment can start until 5 minutes before the deadline (create_payment_attempt). */
+export function paymentWindowOpen(
+  paymentDueAt: string,
+  now: Date = new Date(),
+): boolean {
+  return now.getTime() < new Date(paymentDueAt).getTime() - 5 * 60_000;
+}

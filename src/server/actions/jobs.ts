@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formDataToObject } from "@/lib/validation/common";
 import {
-  cancelOrderSchema,
   closeJobSchema,
   jobIdSchema,
   jobSchema,
@@ -263,32 +262,4 @@ export async function acceptProposalAction(
   revalidatePath("/dashboard/jobs", "layout");
   revalidatePath("/dashboard/orders");
   redirect(`/dashboard/orders/${orderId}` as Route);
-}
-
-// ---------------------------------------------------------------------------
-// Orders (pre-payment cancellation)
-// ---------------------------------------------------------------------------
-
-export async function cancelOrderAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const guard = await guardOnboarded();
-  if (!guard.ok) return guard.result;
-
-  const raw = formDataToObject(formData);
-  const parsed = cancelOrderSchema.safeParse(raw);
-  if (!parsed.success) return validationFailed(parsed.error, raw);
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("cancel_order", {
-    p_order_id: parsed.data.orderId,
-    p_reason: parsed.data.reason,
-  });
-  if (error) return fail(mapPostgresError(error), raw);
-
-  revalidatePath("/dashboard/orders", "layout");
-  revalidatePath("/dashboard/jobs", "layout");
-  revalidatePath("/jobs");
-  return ok(null, "Pesanan dibatalkan.");
 }

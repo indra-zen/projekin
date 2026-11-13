@@ -132,7 +132,7 @@ All money is in **IDR, stored as integer rupiah** (no fractional amounts). All t
 | BR-09 | **Platform fee: 10%** of the order amount, deducted from the freelancer's earnings. The client pays exactly the listed or proposed price. `platform_fee = floor(amount × 1000 / 10000)` and `freelancer_earnings = amount − platform_fee`. Values are snapshotted on the order. |
 | BR-10 | **Payment window: 24 hours** from order creation (`payment_due_at`). Snap transaction expiry is aligned to this deadline. Unpaid orders are cancelled automatically after `payment_due_at` plus a **15-minute** grace period. |
 | BR-11 | Max **5 payment attempts** per order. A pending attempt with a still-valid Snap token is reused rather than replaced. |
-| BR-12 | Max **5** orders in `awaiting_payment` per client at any time. |
+| BR-12 | Max **5** orders in `awaiting_payment` per client at any time, and at most **one** unpaid order per client for the same service (prevents duplicate orders from double submits). |
 | BR-13 | Max **10** jobs with status `open` or `hiring` per client. |
 | BR-14 | Max **30** proposals per freelancer per rolling 24 hours. Max **one** proposal per freelancer per job (a withdrawn proposal cannot be resubmitted). |
 | BR-15 | Max **20** published services per freelancer. |

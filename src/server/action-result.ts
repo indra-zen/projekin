@@ -9,6 +9,7 @@ export type ErrorCode =
   | "CONFLICT"
   | "LIMIT_REACHED"
   | "RATE_LIMITED"
+  | "PAYMENT_PROVIDER_ERROR"
   | "INTERNAL_ERROR";
 
 export type FieldErrors = Partial<Record<string, string[]>>;

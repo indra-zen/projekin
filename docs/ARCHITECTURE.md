@@ -93,13 +93,13 @@ flowchart LR
 | `NEXT_PUBLIC_SITE_URL` | public | Absolute base URL for auth email redirects and the Snap `finish` callback |
 | `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public | Publishable key (`sb_publishable_…`), or the legacy anon key |
-| `SUPABASE_SECRET_KEY` | **server only** | Secret key (`sb_secret_…`), or the legacy service-role key. Bypasses RLS. |
+| `SUPABASE_SECRET_KEY` | **server only** | Secret key (`sb_secret_…`), or the legacy service-role key. Bypasses RLS. (Dev uses the legacy key: `supabase projects api-keys` returns new secret keys masked.) |
 | `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | public | Loads Snap.js |
 | `MIDTRANS_SERVER_KEY` | **server only** | Snap API, Status API, signature verification |
 | `MIDTRANS_IS_PRODUCTION` | server | Must be `"false"`. Startup validation throws if it is anything else (MVP guard). |
 | `CRON_SECRET` | **server only** | Bearer token Vercel Cron sends to `/api/cron/*` |
 
-- Validated at startup with Zod in `src/lib/env/server.ts` (imports `server-only`) and `src/lib/env/client.ts`.
+- Public values are validated with Zod in `src/lib/env.ts`. **Decision (2026-11-13):** server-only payment secrets are validated **lazily**, at the payment entry points, by `src/server/payments/config.ts` (`server-only`). The app and CI build run without payment credentials; payment entry points then return `PAYMENT_NOT_CONFIGURED` (actions) or `500` (webhook/cron). The Midtrans URLs are fixed to the sandbox hosts, and any `MIDTRANS_IS_PRODUCTION` other than `false` throws.
 - `.env.example` is committed with empty values. `.env.local` is git-ignored.
 - CLI-only credentials (`SUPABASE_ACCESS_TOKEN` from `npx supabase login`, and the database password used by `supabase link`/`db push`) are never app env vars and are never committed.
 - Midtrans base URLs come from `MIDTRANS_IS_PRODUCTION`: Snap `https://app.sandbox.midtrans.com/snap/v1/transactions`, Core `https://api.sandbox.midtrans.com/v2`, Snap.js `https://app.sandbox.midtrans.com/snap/snap.js`.
@@ -149,9 +149,9 @@ Because the dev database is shared with preview deployments and is never empty, 
 │   │   ├── actions/              # 'use server' modules, one per domain (API_CONTRACT §4)
 │   │   ├── auth.ts               # requireUser / requireOnboarded / requireAdmin
 │   │   ├── errors.ts             # Postgres error → ActionResult mapping
-│   │   └── payments/             # midtrans-client.ts, signature.ts, status-map.ts, process-status.ts
+│   │   └── payments/             # config.ts, midtrans-client.ts, signature.ts, status-map.ts, snap-request.ts, checkout.ts, process-status.ts
 │   ├── lib/
-│   │   ├── supabase/             # server.ts, client.ts (browser), proxy.ts; admin.ts (server-only) arrives with payments
+│   │   ├── supabase/             # server.ts, client.ts (browser), proxy.ts, admin.ts (server-only, secret key)
 │   │   ├── validation/           # Zod schemas (shared client/server)
 │   │   ├── env/                  # server.ts, client.ts
 │   │   ├── format.ts             # IDR, dates (Asia/Jakarta), order code PJK-000123
@@ -195,7 +195,7 @@ Because the dev database is shared with preview deployments and is never empty, 
 |---|---|---|---|---|
 | Browser | `lib/supabase/browser.ts` | publishable | Client components: auth forms, storage uploads | Yes |
 | Server (user) | `lib/supabase/server.ts` | publishable + session cookies | Server Components, Server Actions | Yes |
-| Admin (**not created yet**: the identity features need no secret key) | `lib/supabase/admin.ts` (`import 'server-only'`) | **secret** | **Only:** payment functions in `src/server/payments/**` (attach token / fail attempt / apply status), called by the `startPayment` and `syncPaymentStatus` actions after they authorize the user, plus the Midtrans notification handler and the reconcile cron | **Bypassed** |
+| Admin | `lib/supabase/admin.ts` (`import 'server-only'`) | **secret** | **Only:** payment functions in `src/server/payments/**` (attach token / fail attempt / apply status), called by the `startPayment` and `syncPaymentStatus` actions after they authorize the user, plus the Midtrans notification handler and the reconcile cron | **Bypassed** |
 
 Rules for the admin client:
 - Never import it from a component file. ESLint `no-restricted-imports` blocks `lib/supabase/admin` outside `src/server/payments/**` and `src/app/api/**`. Server Actions reach it only through functions exported from `src/server/payments/`. `cancelOrder` needs only the Midtrans client (to expire transactions), not the admin DB client.
@@ -251,10 +251,12 @@ Capability matrix (summary; the authoritative rules are [DATABASE §7, §9](DATA
 | `server/payments/midtrans-client.ts` | `createSnapTransaction`, `getTransactionStatus`, `expireTransaction`. Basic auth `base64(serverKey + ':')`, 10 s timeout, typed responses. |
 | `server/payments/signature.ts` | `verifyNotificationSignature(payload)`: `SHA512(order_id + status_code + gross_amount + serverKey)` compared with `crypto.timingSafeEqual` |
 | `server/payments/status-map.ts` | Mirrors the mapping table in [DATABASE §8.2](DATABASE.md#82-payment-attempt-and-apply_payment_status), for display and logging only (the database does the authoritative mapping). |
+| `server/payments/snap-request.ts` | Pure Snap body builder (amount = item sum, expiry ≤ `payment_due_at`, `enabled_payments`) |
+| `server/payments/checkout.ts` | `createSnapCheckout` (Snap create → `attach_snap_token`, or `fail_payment_attempt`), `expireMidtransTransactions` |
 | `server/payments/process-status.ts` | `syncAndApply(midtransOrderId)`: Status API → parse `gross_amount` to integer → `apply_payment_status` RPC (admin client) → result |
 | `app/api/payments/midtrans/notification/route.ts` | Webhook endpoint |
 | `app/api/cron/reconcile-payments/route.ts` | Reconciliation |
-| `components/orders/pay-button.tsx` | Loads Snap.js (client key), calls `startPayment`, opens `window.snap.pay(token, callbacks)`, calls `syncPaymentStatus` on every callback |
+| `components/orders/payment-panel.tsx` | Loads Snap.js (client key) on demand, calls `startPayment`, opens `window.snap.pay(token, callbacks)`, calls `syncPaymentStatus` on every callback and on `?payment=finish`. Falls back to the Snap redirect page if Snap.js or the client key is unavailable. |
 
 ### 9.2 Checkout flow
 
@@ -362,6 +364,8 @@ This makes payments work in local development without a public webhook URL, and 
 | Order payment window closes during checkout | `create_payment_attempt` refuses within 5 minutes of `payment_due_at`. Snap expiry is aligned with the deadline. |
 | Card `challenge` (fraud review) | Stays `pending`. A later notification resolves it. |
 | Refund/chargeback notification | Payment → `refunded`. The order status is unchanged, and the admin investigates (event `payment_refunded_by_provider`). |
+| Order paid through an older attempt while a newer one is live | The newer live attempt is marked `cancelled` (`superseded`). If it is paid anyway, it is flagged `duplicate_payment_detected` (refund pending). |
+| Cancel before the customer chose a method in Snap | Midtrans `expire` answers `404` (nothing to expire). A popup left open could still pay; that payment is a late payment (refund pending). |
 
 ---
 

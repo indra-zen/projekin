@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   acceptProposalAction,
-  cancelOrderAction,
   closeJobAction,
   createJobAction,
   rejectProposalAction,
@@ -399,54 +398,5 @@ export function ProposalDecision({
         </form>
       ) : null}
     </div>
-  );
-}
-
-export function CancelOrderForm({ orderId }: { orderId: string }) {
-  const [state, action] = useActionState(cancelOrderAction, null);
-  const [open, setOpen] = useState(false);
-  if (state?.ok) return <FormAlert state={state} />;
-  if (!open) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-      >
-        Batalkan pesanan
-      </Button>
-    );
-  }
-  return (
-    <form
-      action={action}
-      className="space-y-3 rounded-2xl border p-4"
-      noValidate
-    >
-      <FormAlert state={state} />
-      <input type="hidden" name="orderId" value={orderId} />
-      <Field
-        label="Alasan pembatalan"
-        htmlFor="cancel-reason"
-        error={fieldError(state, "reason")}
-      >
-        <Textarea
-          id="cancel-reason"
-          name="reason"
-          rows={2}
-          maxLength={500}
-          defaultValue={fieldValue(state, "reason")}
-        />
-      </Field>
-      <div className="flex flex-wrap gap-2">
-        <SubmitButton variant="outline" pendingLabel="Membatalkan…">
-          Ya, batalkan
-        </SubmitButton>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-          Kembali
-        </Button>
-      </div>
-    </form>
   );
 }

@@ -690,7 +690,7 @@ describe("cancel_order (before payment)", () => {
     await expectPgError(
       rpc(client, "select public.cancel_order($1, '   ')", [orderId]),
       "PJ422",
-      "INVALID_REASON",
+      "INVALID_CANCEL_REASON",
     );
 
     await rpc(client, "select public.cancel_order($1, 'Salah pilih')", [

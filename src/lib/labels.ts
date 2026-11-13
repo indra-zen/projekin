@@ -33,18 +33,91 @@ export const proposalReasonLabels: Record<string, string> = {
 
 export const orderEventLabels: Record<string, string> = {
   created: "Pesanan dibuat",
+  payment_attempt_created: "Pembayaran dimulai",
+  payment_paid: "Pembayaran diterima, pesanan mulai dikerjakan",
+  payment_failed: "Percobaan pembayaran gagal",
+  payment_expired: "Percobaan pembayaran kedaluwarsa",
+  payment_cancelled: "Percobaan pembayaran dibatalkan",
+  late_payment_detected:
+    "Pembayaran masuk setelah pesanan dibatalkan (dana dikembalikan oleh admin)",
+  duplicate_payment_detected:
+    "Pembayaran ganda terdeteksi (kelebihan dana dikembalikan oleh admin)",
+  payment_refunded_by_provider: "Pembayaran dikembalikan oleh Midtrans",
+  delivered: "Hasil kerja dikirim",
+  revision_requested: "Revisi diminta",
+  completed: "Pesanan diselesaikan oleh klien",
+  auto_completed: "Pesanan selesai otomatis",
   cancelled: "Pesanan dibatalkan",
+  dispute_opened: "Sengketa dibuka",
+  dispute_resolved: "Sengketa diselesaikan",
+  refund_marked: "Pengembalian dana dicatat",
+  payout_marked: "Pencairan dana dicatat",
+};
+
+export const paymentStatusLabels: Record<Enums<"payment_status">, string> = {
+  initiated: "Disiapkan",
+  pending: "Menunggu pembayaran",
+  paid: "Dibayar",
+  failed: "Gagal",
+  expired: "Kedaluwarsa",
+  cancelled: "Dibatalkan",
+  refunded: "Dikembalikan",
+};
+
+export const refundStatusLabels: Record<Enums<"refund_status">, string> = {
+  none: "",
+  pending: "Pengembalian dana sedang diproses admin",
+  refunded: "Dana sudah dikembalikan",
+};
+
+export const payoutStatusLabels: Record<Enums<"payout_status">, string> = {
+  none: "Belum ada",
+  pending: "Menunggu pencairan oleh admin",
+  paid: "Sudah dicairkan",
+};
+
+/** Midtrans `payment_type` values shown to users. */
+export function paymentTypeLabel(type: string | null): string {
+  if (!type) return "—";
+  const labels: Record<string, string> = {
+    qris: "QRIS",
+    gopay: "GoPay",
+    shopeepay: "ShopeePay",
+    bank_transfer: "Virtual Account",
+    echannel: "Mandiri Bill",
+    credit_card: "Kartu kredit",
+  };
+  return labels[type] ?? type;
+}
+
+/** System cancellation reasons stored in orders.cancellation_reason. */
+export const cancellationReasonLabels: Record<string, string> = {
+  payment_window_expired: "Batas waktu pembayaran (24 jam) terlewati",
 };
 
 type Tone = "neutral" | "positive" | "warning" | "negative";
 
 export function toneFor(status: string): Tone {
   if (
-    ["open", "accepted", "completed", "filled", "in_progress"].includes(status)
+    ["open", "accepted", "completed", "filled", "in_progress", "paid"].includes(
+      status,
+    )
   )
     return "positive";
-  if (["hiring", "submitted", "awaiting_payment", "delivered"].includes(status))
+  if (
+    [
+      "hiring",
+      "submitted",
+      "awaiting_payment",
+      "delivered",
+      "pending",
+      "initiated",
+    ].includes(status)
+  )
     return "warning";
-  if (["rejected", "cancelled", "disputed"].includes(status)) return "negative";
+  if (
+    ["rejected", "cancelled", "disputed", "failed", "expired"].includes(status)
+  )
+    return "negative";
   return "neutral";
 }

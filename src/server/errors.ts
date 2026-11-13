@@ -16,6 +16,7 @@ const CONFLICT_REASONS = new Set([
   "USERNAME_TAKEN",
   "PAYMENT_IN_PROGRESS",
   "JOB_ALREADY_HIRED",
+  "SERVICE_ORDER_PENDING",
 ]);
 
 const CONSTRAINT_REASONS: Record<string, string> = {

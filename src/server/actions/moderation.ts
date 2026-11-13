@@ -62,7 +62,8 @@ export async function setServiceBlockAction(
   const { error } = await supabase.rpc("admin_set_service_block", {
     p_service_id: parsed.data.serviceId,
     p_blocked: parsed.data.blocked,
-    p_reason: parsed.data.blocked ? parsed.data.reason : null,
+    // Omitted when unblocking (SQL default null).
+    ...(parsed.data.blocked ? { p_reason: parsed.data.reason } : {}),
   });
   if (error) return fail(mapPostgresError(error));
   revalidatePath("/admin/moderation");

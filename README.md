@@ -4,7 +4,7 @@ Student-powered freelance marketplace. Only verified university students can wor
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui · Supabase (Postgres, Auth, Storage, RLS) · Vitest + PGlite · Midtrans Snap Sandbox (planned)
+Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui · Supabase (Postgres, Auth, Storage, RLS) · Vitest + PGlite · Midtrans Snap Sandbox
 
 ## Setup
 
@@ -14,13 +14,20 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
    npm install
    ```
 
-2. **Environment.** Copy `.env.example` to `.env.local` and fill in the values from your Supabase project (Project Settings → API). Only **public** keys are needed; never put a secret/service-role key in a `NEXT_PUBLIC_*` variable.
+2. **Environment.** Copy `.env.example` to `.env.local` (git-ignored) and fill in the values. Never put a server-only key in a `NEXT_PUBLIC_*` variable.
 
-   | Variable | Value |
-   |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key (`sb_publishable_…`) or the legacy anon key |
-   | `NEXT_PUBLIC_SITE_URL` (optional) | e.g. `http://localhost:3000`; used for auth email links |
+   | Variable | Exposure | Value |
+   |---|---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase Project URL |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public | Publishable key (`sb_publishable_…`) or the legacy anon key |
+   | `NEXT_PUBLIC_SITE_URL` (optional) | public | e.g. `http://localhost:3000`; used for auth email links and the Snap "finish" redirect |
+   | `MIDTRANS_IS_PRODUCTION` | server | Must be `false` (Sandbox only) |
+   | `MIDTRANS_SERVER_KEY` | **server only** | Midtrans **Sandbox** dashboard → Settings → Access Keys → Server Key |
+   | `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | public | Same page → Client Key (Snap.js popup) |
+   | `SUPABASE_SECRET_KEY` | **server only** | Supabase → Project Settings → API Keys → secret key, or the legacy `service_role` key. Bypasses RLS; only `src/server/payments` and `src/app/api` use it. |
+   | `CRON_SECRET` | **server only** | Any long random string (`openssl rand -hex 32`) |
+
+   Without the payment variables the app still runs; checkout then shows "Pembayaran belum dikonfigurasi".
 
 3. **Apply the database migrations** to your hosted **dev** project (needs your Supabase login and the database password; nothing is committed):
 
@@ -64,6 +71,12 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
    ```bash
    npm run dev   # http://localhost:3000
    ```
+
+7. **Payments (Midtrans Snap Sandbox).** No real money moves.
+   - Locally there is no public webhook URL. After paying in the Snap popup (or when you return to the order page), the page asks the Midtrans Status API server-side and updates the order. "Periksa status pembayaran" on the order page does the same.
+   - To pay a Virtual Account or QRIS in the sandbox, use the Midtrans **Payment Simulator** linked from the current Midtrans Sandbox testing docs, with the VA number or QR shown in Snap.
+   - **Deployed environment:** set the Midtrans Sandbox dashboard → Settings → Payment → **Notification URL** to `https://<your-domain>/api/payments/midtrans/notification`. The handler verifies the signature, logs every notification in `payment_notifications`, and applies only what the Status API confirms.
+   - Unpaid orders are cancelled automatically 24 h + 15 min after creation by the `expire-unpaid-orders` `pg_cron` job, which the payments migration schedules. A daily Vercel Cron (`vercel.json`) calls `/api/cron/reconcile-payments` with `CRON_SECRET` to heal missed notifications.
 
 ## Scripts
 

@@ -206,6 +206,51 @@ export type Database = {
           },
         ]
       }
+      order_deliveries: {
+        Row: {
+          attachment_paths: string[]
+          created_at: string
+          delivery_number: number
+          freelancer_id: string
+          id: string
+          message: string
+          order_id: string
+        }
+        Insert: {
+          attachment_paths?: string[]
+          created_at?: string
+          delivery_number: number
+          freelancer_id: string
+          id?: string
+          message: string
+          order_id: string
+        }
+        Update: {
+          attachment_paths?: string[]
+          created_at?: string
+          delivery_number?: number
+          freelancer_id?: string
+          id?: string
+          message?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_deliveries_freelancer_id_fkey"
+            columns: ["freelancer_id"]
+            isOneToOne: false
+            referencedRelation: "freelancer_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "order_deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_events: {
         Row: {
           actor_id: string | null
@@ -412,6 +457,138 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_notifications: {
+        Row: {
+          error: string | null
+          id: number
+          midtrans_order_id: string | null
+          payload: Json
+          processed_at: string | null
+          processing_result: string | null
+          received_at: string
+          signature_valid: boolean
+          status_code: string | null
+          transaction_status: string | null
+        }
+        Insert: {
+          error?: string | null
+          id?: never
+          midtrans_order_id?: string | null
+          payload: Json
+          processed_at?: string | null
+          processing_result?: string | null
+          received_at?: string
+          signature_valid: boolean
+          status_code?: string | null
+          transaction_status?: string | null
+        }
+        Update: {
+          error?: string | null
+          id?: never
+          midtrans_order_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+          processing_result?: string | null
+          received_at?: string
+          signature_valid?: boolean
+          status_code?: string | null
+          transaction_status?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          attempt_no: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          last_synced_at: string | null
+          midtrans_fraud_status: string | null
+          midtrans_order_id: string
+          midtrans_status_code: string | null
+          midtrans_transaction_id: string | null
+          midtrans_transaction_status: string | null
+          order_id: string
+          paid_at: string | null
+          payment_type: string | null
+          refund_marked_at: string | null
+          refund_marked_by: string | null
+          refund_reference: string | null
+          refund_status: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url: string | null
+          snap_token: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_no: number
+          created_at?: string
+          failure_reason?: string | null
+          gross_amount: number
+          id?: string
+          last_synced_at?: string | null
+          midtrans_fraud_status?: string | null
+          midtrans_order_id: string
+          midtrans_status_code?: string | null
+          midtrans_transaction_id?: string | null
+          midtrans_transaction_status?: string | null
+          order_id: string
+          paid_at?: string | null
+          payment_type?: string | null
+          refund_marked_at?: string | null
+          refund_marked_by?: string | null
+          refund_reference?: string | null
+          refund_status?: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url?: string | null
+          snap_token?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_no?: number
+          created_at?: string
+          failure_reason?: string | null
+          gross_amount?: number
+          id?: string
+          last_synced_at?: string | null
+          midtrans_fraud_status?: string | null
+          midtrans_order_id?: string
+          midtrans_status_code?: string | null
+          midtrans_transaction_id?: string | null
+          midtrans_transaction_status?: string | null
+          order_id?: string
+          paid_at?: string | null
+          payment_type?: string | null
+          refund_marked_at?: string | null
+          refund_marked_by?: string | null
+          refund_reference?: string | null
+          refund_status?: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url?: string | null
+          snap_token?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_refund_marked_by_fkey"
+            columns: ["refund_marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -781,6 +958,85 @@ export type Database = {
     }
     Functions: {
       accept_proposal: { Args: { p_proposal_id: string }; Returns: string }
+      admin_set_service_block: {
+        Args: { p_blocked: boolean; p_reason?: string; p_service_id: string }
+        Returns: {
+          blocked_at: string | null
+          blocked_reason: string | null
+          category_id: string
+          cover_image_path: string | null
+          created_at: string
+          delivery_days: number
+          description: string
+          freelancer_id: string
+          id: string
+          price: number
+          published_at: string | null
+          requirements_prompt: string | null
+          revisions_included: number
+          search: unknown
+          status: Database["public"]["Enums"]["service_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "services"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      apply_payment_status: {
+        Args: {
+          p_fraud_status: string
+          p_gross_amount: number
+          p_midtrans_order_id: string
+          p_payment_type: string
+          p_status_code: string
+          p_transaction_id: string
+          p_transaction_status: string
+        }
+        Returns: string
+      }
+      attach_snap_token: {
+        Args: {
+          p_payment_id: string
+          p_redirect_url: string
+          p_snap_token: string
+          p_token_expires_at: string
+        }
+        Returns: {
+          attempt_no: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          last_synced_at: string | null
+          midtrans_fraud_status: string | null
+          midtrans_order_id: string
+          midtrans_status_code: string | null
+          midtrans_transaction_id: string | null
+          midtrans_transaction_status: string | null
+          order_id: string
+          paid_at: string | null
+          payment_type: string | null
+          refund_marked_at: string | null
+          refund_marked_by: string | null
+          refund_reference: string | null
+          refund_status: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url: string | null
+          snap_token: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_order: {
         Args: { p_order_id: string; p_reason: string }
         Returns: string[]
@@ -832,6 +1088,144 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_order: {
+        Args: { p_order_id: string }
+        Returns: {
+          amount: number
+          brief: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_days: number
+          due_at: string | null
+          freelancer_earnings: number
+          freelancer_id: string
+          id: string
+          job_id: string | null
+          order_number: number
+          paid_at: string | null
+          payment_due_at: string
+          payout_marked_at: string | null
+          payout_marked_by: string | null
+          payout_reference: string | null
+          payout_status: Database["public"]["Enums"]["payout_status"]
+          platform_fee: number
+          proposal_id: string | null
+          requirements: string | null
+          revisions_allowed: number
+          revisions_used: number
+          service_id: string | null
+          source: Database["public"]["Enums"]["order_source"]
+          status: Database["public"]["Enums"]["order_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_payment_attempt: {
+        Args: { p_order_id: string }
+        Returns: {
+          attempt_no: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          last_synced_at: string | null
+          midtrans_fraud_status: string | null
+          midtrans_order_id: string
+          midtrans_status_code: string | null
+          midtrans_transaction_id: string | null
+          midtrans_transaction_status: string | null
+          order_id: string
+          paid_at: string | null
+          payment_type: string | null
+          refund_marked_at: string | null
+          refund_marked_by: string | null
+          refund_reference: string | null
+          refund_status: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url: string | null
+          snap_token: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_service_order: {
+        Args: { p_requirements: string; p_service_id: string }
+        Returns: string
+      }
+      deliver_order: {
+        Args: {
+          p_attachment_paths?: string[]
+          p_message: string
+          p_order_id: string
+        }
+        Returns: {
+          attachment_paths: string[]
+          created_at: string
+          delivery_number: number
+          freelancer_id: string
+          id: string
+          message: string
+          order_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      expire_unpaid_orders: { Args: never; Returns: number }
+      fail_payment_attempt: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: {
+          attempt_no: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          last_synced_at: string | null
+          midtrans_fraud_status: string | null
+          midtrans_order_id: string
+          midtrans_status_code: string | null
+          midtrans_transaction_id: string | null
+          midtrans_transaction_status: string | null
+          order_id: string
+          paid_at: string | null
+          payment_type: string | null
+          refund_marked_at: string | null
+          refund_marked_by: string | null
+          refund_reference: string | null
+          refund_status: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url: string | null
+          snap_token: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -901,6 +1295,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_freelancer_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["freelancer_status"]
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          headline: string | null
+          major: string | null
+          skills: string[]
+          status: Database["public"]["Enums"]["freelancer_status"]
+          university_id: string
+          updated_at: string
+          user_id: string
+          verified_until: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "freelancer_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_service_status: {
         Args: {
           p_service_id: string
@@ -925,33 +1342,6 @@ export type Database = {
           title: string
           updated_at: string
         }
-        SetofOptions: {
-          from: "*"
-          to: "services"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      set_freelancer_status: {
-        Args: {
-          p_status: Database["public"]["Enums"]["freelancer_status"]
-          p_user_id: string
-        }
-        Returns: Database["public"]["Tables"]["freelancer_profiles"]["Row"]
-        SetofOptions: {
-          from: "*"
-          to: "freelancer_profiles"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      admin_set_service_block: {
-        Args: {
-          p_blocked: boolean
-          p_reason?: string | null
-          p_service_id: string
-        }
-        Returns: Database["public"]["Tables"]["services"]["Row"]
         SetofOptions: {
           from: "*"
           to: "services"
@@ -1052,8 +1442,17 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "disputed"
+      payment_status:
+        | "initiated"
+        | "pending"
+        | "paid"
+        | "failed"
+        | "expired"
+        | "cancelled"
+        | "refunded"
       payout_status: "none" | "pending" | "paid"
       proposal_status: "submitted" | "accepted" | "rejected" | "withdrawn"
+      refund_status: "none" | "pending" | "refunded"
       service_status: "draft" | "published" | "paused" | "archived"
       student_verification_state:
         | "unverified"
@@ -1203,8 +1602,18 @@ export const Constants = {
         "cancelled",
         "disputed",
       ],
+      payment_status: [
+        "initiated",
+        "pending",
+        "paid",
+        "failed",
+        "expired",
+        "cancelled",
+        "refunded",
+      ],
       payout_status: ["none", "pending", "paid"],
       proposal_status: ["submitted", "accepted", "rejected", "withdrawn"],
+      refund_status: ["none", "pending", "refunded"],
       service_status: ["draft", "published", "paused", "archived"],
       student_verification_state: [
         "unverified",

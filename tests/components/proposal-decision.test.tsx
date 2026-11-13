@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const calls = vi.hoisted(() => ({ accept: [] as FormData[] }));
@@ -7,10 +13,12 @@ const calls = vi.hoisted(() => ({ accept: [] as FormData[] }));
 vi.mock("@/server/actions/jobs", () => ({
   acceptProposalAction: vi.fn(async (_prev: unknown, fd: FormData) => {
     calls.accept.push(fd);
-    return { ok: false, error: { code: "INVALID_STATE", message: "SERVER_SAID_NO" } };
+    return {
+      ok: false,
+      error: { code: "INVALID_STATE", message: "SERVER_SAID_NO" },
+    };
   }),
   rejectProposalAction: vi.fn(async () => null),
-  cancelOrderAction: vi.fn(async () => null),
   closeJobAction: vi.fn(async () => null),
   createJobAction: vi.fn(async () => null),
   submitProposalAction: vi.fn(async () => null),
@@ -23,7 +31,12 @@ afterEach(cleanup);
 
 describe("ProposalDecision", () => {
   it("submits the proposal id to the accept action after confirmation", async () => {
-    render(<ProposalDecision proposalId="6f1c2e3a-0b4d-4e5f-8a9b-0c1d2e3f4a5b" freelancerName="Rina" />);
+    render(
+      <ProposalDecision
+        proposalId="6f1c2e3a-0b4d-4e5f-8a9b-0c1d2e3f4a5b"
+        freelancerName="Rina"
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Terima/ }));
     expect(screen.getByText(/Rekrut/)).toBeTruthy();
     await act(async () => {
@@ -31,6 +44,8 @@ describe("ProposalDecision", () => {
     });
     await screen.findByText("SERVER_SAID_NO");
     expect(calls.accept).toHaveLength(1);
-    expect(calls.accept[0]!.get("proposalId")).toBe("6f1c2e3a-0b4d-4e5f-8a9b-0c1d2e3f4a5b");
+    expect(calls.accept[0]!.get("proposalId")).toBe(
+      "6f1c2e3a-0b4d-4e5f-8a9b-0c1d2e3f4a5b",
+    );
   });
 });

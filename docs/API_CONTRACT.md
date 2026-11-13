@@ -62,7 +62,7 @@ Actions **never throw** for expected failures. `redirect()` is used only after a
 | `INVALID_STATE` | Status transition not allowed (`PJ409` with a state reason) | 409 |
 | `CONFLICT` | Duplicate (`PJ409` duplicate reasons, or `23505`) | 409 |
 | `LIMIT_REACHED` | BR-11..BR-15 limits (`PJ409` with a `MAX_*` reason) | 429 |
-| `PAYMENT_PROVIDER_ERROR` | Midtrans unreachable or returned an error | 502 |
+| `PAYMENT_PROVIDER_ERROR` | Midtrans unreachable or returned an error (reason `PAYMENT_PROVIDER_ERROR`), or the server has no payment credentials (reason `PAYMENT_NOT_CONFIGURED`) | 502 |
 | `INTERNAL_ERROR` | Anything else (logged with a correlation ID) | 500 |
 
 ### 1.4 Validation rules
@@ -136,7 +136,7 @@ Domain schemas (in `src/lib/validation/<domain>.ts`) are named after the action 
 | Auth | `signature_key` in body = `sha512(order_id + status_code + gross_amount + MIDTRANS_SERVER_KEY)` (hex, timing-safe compare) |
 | Request body (fields used) | `order_id`, `status_code`, `gross_amount` (string, e.g. `"150000.00"`), `signature_key`, `transaction_status`, `fraud_status?`, `transaction_id`, `payment_type`. All other fields are stored raw. |
 | Processing | [ARCHITECTURE §9.3](ARCHITECTURE.md#93-notification-webhook-flow). Values passed to `apply_payment_status` come from the **Status API**, not the notification body. |
-| Responses | `200 {"ok":true,"result":"<processing_result>"}`: processed, or deliberately ignored (`unknown_payment`, `amount_mismatch`, `no_change`, `ignored_regression`). `400`: malformed JSON or missing required fields. `401`: invalid signature. `500`: transient failure (Midtrans will retry). |
+| Responses | `200 {"ok":true,"result":"<processing_result>"}`: processed, or deliberately ignored (`unknown_payment`, `amount_mismatch`, `no_change`, `ignored_regression`, `not_found`, `error` for an unrecognised status). `400`: malformed JSON, missing required fields, or body over 64 KB. `401`: invalid signature (logged with `signature_valid=false`, nothing applied). `500`: transient failure or missing server configuration (Midtrans will retry). The logged payload omits `signature_key`. |
 | Runtime | Node.js (`export const runtime = 'nodejs'`), `dynamic = 'force-dynamic'`. Body ≤ 64 KB. |
 
 ### 3.3 `GET /api/cron/reconcile-payments`
@@ -173,7 +173,9 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `createJob` / `updateJob` / `closeJob` | `createJobAction` / `updateJobAction` / `closeJobAction` (`jobs.ts`) | Jobs also take `requirements`. Create and update redirect to `/dashboard/jobs/{id}`. |
 | `submitProposal` / `withdrawProposal` | `submitProposalAction` / `withdrawProposalAction({ proposalId })` | `submitProposalAction` uses `guardVerifiedFreelancer()` (database state) before the RPC |
 | `rejectProposal` / `acceptProposal` | `rejectProposalAction` / `acceptProposalAction` | Accept redirects to `/dashboard/orders/{orderId}` |
-| `cancelOrder` | `cancelOrderAction` | `awaiting_payment` only, until payments (no Midtrans expire call yet) |
+| `cancelOrder` | `cancelOrderAction` (`orders.ts`) | Full BR-20. Expires the returned live attempts at Midtrans (best effort). |
+| `createServiceOrder` / `deliverOrder` / `completeOrder` | `createServiceOrderAction` / `deliverOrderAction` / `completeOrderAction` (`orders.ts`) | Create redirects to `/dashboard/orders/{orderId}`. `deliverOrder` is message-only until the `order-files` bucket arrives (Phase 7). |
+| `startPayment` / `syncPaymentStatus` | `startPaymentAction({ orderId })` / `syncPaymentStatusAction({ orderId })` (`payments.ts`) | Both return `ActionResult` (not form state); called from `PaymentPanel`. |
 
 Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
 
@@ -249,9 +251,9 @@ Shared `jobFields = { categoryId, title: text(10,100), description: text(50,5000
 
 | Action | Auth | Input | Output | Backing | Errors · Revalidates |
 |---|---|---|---|---|---|
-| `createServiceOrder` | onboarded | `{ serviceId, requirements: text(10,5000) }` | `{ orderId }` | RPC `create_service_order` | `FORBIDDEN`/`OWN_SERVICE`, `INVALID_STATE`/`SERVICE_NOT_AVAILABLE`, `LIMIT_REACHED`/`MAX_AWAITING_PAYMENT_ORDERS` · `/dashboard/orders` |
+| `createServiceOrder` | onboarded | `{ serviceId, requirements: text(10,5000) }` | redirect to `/dashboard/orders/{orderId}` | RPC `create_service_order` | `FORBIDDEN`/`OWN_SERVICE`, `NOT_FOUND`/`SERVICE_NOT_FOUND`, `INVALID_STATE`/`SERVICE_NOT_AVAILABLE`, `CONFLICT`/`SERVICE_ORDER_PENDING`, `LIMIT_REACHED`/`MAX_AWAITING_PAYMENT_ORDERS` · `/dashboard/orders` |
 | `cancelOrder` | client, freelancer or admin (`awaiting_payment`); freelancer (`in_progress`, no deliveries), per BR-20 | `{ orderId, reason: text(1,500) }` | `{ status: 'cancelled' }` | RPC `cancel_order` → for each returned `midtrans_order_id`, Midtrans `POST /v2/{id}/expire` (best effort; failures logged, not surfaced) | `INVALID_STATE`/`ORDER_NOT_CANCELLABLE`, `FORBIDDEN` · `/dashboard/orders`, `/dashboard/orders/[id]`, job pages |
-| `deliverOrder` | order freelancer | `{ orderId, message: text(1,5000), attachmentPaths: z.array(storagePath).max(10) }` | `{ deliveryId }` | RPC `deliver_order` | `INVALID_STATE`/`ORDER_NOT_IN_PROGRESS`, `VALIDATION_ERROR`/`ATTACHMENT_NOT_FOUND` · `/dashboard/orders/[id]` |
+| `deliverOrder` | order freelancer | `{ orderId, message: text(1,5000), attachmentPaths: z.array(storagePath).max(10) }` (attachments from Phase 7) | `{ deliveryId }` | RPC `deliver_order` | `INVALID_STATE`/`ORDER_NOT_IN_PROGRESS`, `FORBIDDEN`/`NOT_ORDER_FREELANCER`, `VALIDATION_ERROR`/`ATTACHMENT_NOT_FOUND` · `/dashboard/orders/[id]` |
 | `requestRevision` | order client | `{ orderId, message: text(1,5000) }` | `{ order }` | RPC `request_revision` | `INVALID_STATE`/`ORDER_NOT_DELIVERED`, `INVALID_STATE`/`NO_REVISIONS_LEFT` |
 | `completeOrder` | order client | `{ orderId }` | `{ order }` | RPC `complete_order` | `INVALID_STATE`/`ORDER_NOT_DELIVERED` · + `/dashboard/earnings` |
 | `openDispute` | participant | `{ orderId, reason: text(20,2000) }` | `{ disputeId }` | RPC `open_dispute` | `INVALID_STATE`/`ORDER_NOT_DISPUTABLE`, `CONFLICT`/`DISPUTE_EXISTS` |
@@ -369,19 +371,21 @@ Request: see [ARCHITECTURE §9.2](ARCHITECTURE.md#92-checkout-flow). Invariants:
 - `transaction_details.gross_amount = payments.gross_amount = sum(item_details.price × quantity)`
 - `expiry` ends at or before `orders.payment_due_at`
 
-Success `201`: `{ "token": string, "redirect_url": string }`. Anything else → `fail_payment_attempt(reason = 'snap_<status>')` and `PAYMENT_PROVIDER_ERROR`.
+- `enabled_payments` = `other_qris` (QRIS), `gopay`, `shopeepay` (e-wallets), `bca_va`, `bni_va`, `bri_va`, `permata_va`, `cimb_va`, `echannel`, `other_va` (virtual accounts). DANA is left out because Midtrans requires the transaction ID (not our order ID) for its status lookups, which would break return-sync.
+
+Success `201`: `{ "token": string, "redirect_url": string }` (verified against the sandbox, 2026-11-13). Anything else → `fail_payment_attempt(reason = 'snap_<status>')` and `PAYMENT_PROVIDER_ERROR`.
 
 ### 6.2 Get transaction status
 
 `GET https://api.sandbox.midtrans.com/v2/{midtrans_order_id}/status`
 
 The response fields used are `transaction_status`, `fraud_status`, `status_code`, `gross_amount`, `payment_type` and `transaction_id`. `gross_amount` (a string like `"150000.00"`) is parsed to an integer. A non-integer value is treated as `amount_mismatch`.
-- `status_code` `404` in the JSON body (transaction not found) → not an error. Nothing is applied.
+- `status_code` `404` in the JSON body (transaction not found) → not an error. Nothing is applied. The sandbox answers this with **HTTP 200** and body `status_code: "404"` (verified 2026-11-13); the client accepts either form. `transaction_status` is lower-cased before use (DANA/ShopeePay may send upper case).
 - HTTP or network error → `PAYMENT_PROVIDER_ERROR` (sync action) or `500` (webhook, so Midtrans retries).
 
 ### 6.3 Expire transaction
 
-`POST https://api.sandbox.midtrans.com/v2/{midtrans_order_id}/expire`. Used only after `cancel_order`. Best effort. Any result is logged and not surfaced.
+`POST https://api.sandbox.midtrans.com/v2/{midtrans_order_id}/expire`. Used only after `cancel_order`. Best effort. Any result is logged and not surfaced. Success is `status_code "407"`. If the customer never chose a payment method, the sandbox answers `"404"` (nothing to expire); a later payment through a still-open Snap popup is then handled as a late payment (refund pending).
 
 ---
 
