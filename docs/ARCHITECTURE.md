@@ -70,7 +70,7 @@ flowchart LR
 | Data | `@supabase/supabase-js`, `@supabase/ssr` | Generated types `src/types/database.ts` |
 | Payments | Midtrans Snap (Sandbox) through a thin typed `fetch` wrapper | No Midtrans Node SDK (untyped CommonJS, unnecessary for 3 endpoints) |
 | Hosting | Vercel (app + Vercel Cron), Supabase Cloud | |
-| Tests | Vitest (unit + database), Playwright (planned) | Database tests run the real migrations in **PGlite** (embedded Postgres 18, WASM) with a minimal Supabase shim (`tests/db/supabase-shim.sql`), so RLS, grants and RPCs are tested without Docker. CI also applies the migrations to a real Supabase stack. See [IMPLEMENTATION_PLAN §4](IMPLEMENTATION_PLAN.md#4-testing-strategy). |
+| Tests | Vitest (unit + component via React Testing Library/jsdom + database), Playwright (planned) | Database tests run the real migrations in **PGlite** (embedded Postgres 18, WASM) with a minimal Supabase shim (`tests/db/supabase-shim.sql`), so RLS, grants and RPCs are tested without Docker. CI also applies the migrations to a real Supabase stack. See [IMPLEMENTATION_PLAN §4](IMPLEMENTATION_PLAN.md#4-testing-strategy). |
 | Tooling | ESLint (flat config, `next/core-web-vitals` + `typescript-eslint` strict), Prettier, Supabase CLI (npm dev dependency, run with `npx supabase`) | |
 
 ---
