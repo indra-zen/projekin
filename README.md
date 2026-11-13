@@ -44,14 +44,20 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
      - Reset password: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`
    - The built-in email sender is heavily rate-limited; for development you can create users under Authentication → Users with "Auto Confirm User", or configure custom SMTP.
 
-5. **Create the first admin** (SQL Editor; replace the email):
+5. **Create the first admin.** The admin row points at an existing account, so create the account first:
+   1. Register at `/register` (or in the dashboard: Authentication → Users → Add user → Create new user, with "Auto Confirm User" checked, which avoids the rate-limited confirmation email). The sign-up trigger creates the matching `public.profiles` row.
+   2. In the SQL Editor (replace the email):
 
-   ```sql
-   insert into public.admin_users (user_id)
-   select id from auth.users where email = 'admin@example.com';
-   ```
+      ```sql
+      insert into public.admin_users (user_id)
+      select id from auth.users where email = 'admin@example.com'
+      returning user_id;
+      ```
 
-   Admins cannot approve their own verification request.
+      `returning` should show one row. Zero rows means the email doesn't match an account yet.
+   3. Sign in and finish onboarding; the header then shows an "Admin" link.
+
+   Admins cannot approve their own verification request, so test the review flow with a second (student) account.
 
 6. **Run**
 
