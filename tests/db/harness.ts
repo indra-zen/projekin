@@ -137,3 +137,26 @@ export async function expectPgError(
     else expect(err.message).toMatch(message);
   }
 }
+
+/** Makes the user a verified (eligible) freelancer, as an approval would. */
+export async function makeFreelancer(
+  db: PGlite,
+  id: string,
+  opts: { verifiedUntil?: string; status?: "active" | "suspended" } = {},
+): Promise<void> {
+  const uni = await firstUniversityId(db);
+  await db.query(
+    `insert into public.freelancer_profiles (user_id, university_id, verified_until, status)
+     values ($1, $2, coalesce($3::timestamptz, now() + interval '1 year'), $4)
+     on conflict (user_id) do update
+       set verified_until = excluded.verified_until, status = excluded.status`,
+    [id, uni, opts.verifiedUntil ?? null, opts.status ?? "active"],
+  );
+}
+
+export async function firstCategoryId(db: PGlite): Promise<string> {
+  const r = await db.query<{ id: string }>(
+    "select id from public.categories order by sort_order limit 1",
+  );
+  return r.rows[0]!.id;
+}

@@ -3,7 +3,10 @@
 import {
   BadgeCheck,
   BriefcaseBusiness,
+  ClipboardList,
+  FileText,
   LayoutDashboard,
+  Megaphone,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -29,7 +32,14 @@ const items: { href: Route; label: string; icon: typeof LayoutDashboard }[] = [
     label: "Profil freelancer",
     icon: BriefcaseBusiness,
   },
-  { href: "/dashboard/services" as Route, label: "Layanan saya", icon: BriefcaseBusiness },
+  {
+    href: "/dashboard/services" as Route,
+    label: "Layanan saya",
+    icon: BriefcaseBusiness,
+  },
+  { href: "/dashboard/jobs", label: "Lowongan saya", icon: Megaphone },
+  { href: "/dashboard/proposals", label: "Proposal saya", icon: FileText },
+  { href: "/dashboard/orders", label: "Pesanan", icon: ClipboardList },
 ];
 
 export function DashboardNav({ isAdmin }: { isAdmin: boolean }) {

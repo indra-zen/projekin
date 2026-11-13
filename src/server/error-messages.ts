@@ -46,10 +46,36 @@ export const reasonMessages: Record<string, string> = {
   FREELANCER_NOT_ELIGIBLE:
     "Hanya mahasiswa terverifikasi yang dapat melakukan tindakan ini.",
   INVALID_COVER_PATH: "Thumbnail layanan tidak valid. Unggah ulang.",
-  COVER_IMAGE_REQUIRED: "Thumbnail wajib diunggah sebelum layanan dipublikasikan.",
+  COVER_IMAGE_REQUIRED:
+    "Thumbnail wajib diunggah sebelum layanan dipublikasikan.",
   SERVICE_BLOCKED: "Layanan ini diblokir oleh admin.",
   SERVICE_ARCHIVED: "Layanan yang diarsipkan tidak dapat diubah.",
   MAX_PUBLISHED_SERVICES: "Anda telah mencapai batas layanan terpublikasi.",
+  NOT_FOUND: "Data tidak ditemukan.",
+  // Jobs & proposals
+  JOB_NOT_FOUND: "Lowongan tidak ditemukan.",
+  NOT_JOB_OWNER: "Hanya pemilik lowongan yang dapat melakukan tindakan ini.",
+  JOB_NOT_OPEN: "Lowongan ini sudah tidak menerima proposal atau perekrutan.",
+  JOB_NOT_EDITABLE:
+    "Lowongan hanya dapat diubah selama masih dibuka dan belum menerima proposal. Tutup lowongan lalu buat yang baru.",
+  MAX_ACTIVE_JOBS:
+    "Anda sudah memiliki 10 lowongan aktif. Tutup salah satu terlebih dahulu.",
+  OWN_JOB: "Anda tidak dapat mengirim proposal ke lowongan milik sendiri.",
+  ALREADY_PROPOSED: "Anda sudah pernah mengirim proposal untuk lowongan ini.",
+  MAX_PROPOSALS_PER_DAY:
+    "Batas 30 proposal per 24 jam telah tercapai. Coba lagi nanti.",
+  INVALID_COVER_LETTER: "Surat pengantar harus 50–3.000 karakter.",
+  INVALID_PRICE: "Harga harus antara Rp10.000 dan Rp50.000.000.",
+  INVALID_DELIVERY_DAYS: "Waktu pengerjaan harus 1–60 hari.",
+  INVALID_REVISIONS: "Jumlah revisi harus 0–5.",
+  PROPOSAL_NOT_FOUND: "Proposal tidak ditemukan.",
+  PROPOSAL_NOT_SUBMITTED: "Proposal ini sudah diproses sebelumnya.",
+  MAX_AWAITING_PAYMENT_ORDERS:
+    "Anda memiliki 5 pesanan yang menunggu pembayaran. Selesaikan atau batalkan salah satu terlebih dahulu.",
+  JOB_ALREADY_HIRED: "Lowongan ini sudah memiliki freelancer terpilih.",
+  // Orders
+  ORDER_NOT_FOUND: "Pesanan tidak ditemukan.",
+  ORDER_NOT_CANCELLABLE: "Pesanan ini tidak dapat dibatalkan lagi.",
   INVALID_SERVICE_TRANSITION: "Perubahan status layanan tidak valid.",
 };
 

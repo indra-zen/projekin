@@ -170,6 +170,47 @@ export type Database = {
         Update: { category_id?: string; title?: string; description?: string; price?: number; delivery_days?: number; revisions_included?: number; requirements_prompt?: string | null; cover_image_path?: string | null; status?: Database["public"]["Enums"]["service_status"]; published_at?: string | null; blocked_at?: string | null; blocked_reason?: string | null; updated_at?: string }
         Relationships: []
       }
+      jobs: {
+        Row: { id: string; client_id: string; category_id: string; title: string; description: string; requirements: string | null; budget_min: number; budget_max: number; deadline: string | null; status: Database["public"]["Enums"]["job_status"]; closed_at: string | null; closed_reason: string | null; search: unknown; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id: string; category_id: string; title: string; description: string; requirements?: string | null; budget_min: number; budget_max: number; deadline?: string | null; status?: Database["public"]["Enums"]["job_status"]; closed_at?: string | null; closed_reason?: string | null; created_at?: string; updated_at?: string }
+        Update: { category_id?: string; title?: string; description?: string; requirements?: string | null; budget_min?: number; budget_max?: number; deadline?: string | null; status?: Database["public"]["Enums"]["job_status"]; closed_at?: string | null; closed_reason?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "jobs_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "jobs_category_id_fkey"; columns: ["category_id"]; isOneToOne: false; referencedRelation: "categories"; referencedColumns: ["id"] },
+        ]
+      }
+      proposals: {
+        Row: { id: string; job_id: string; freelancer_id: string; cover_letter: string; price: number; delivery_days: number; revisions_included: number; status: Database["public"]["Enums"]["proposal_status"]; status_reason: string | null; decided_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; job_id: string; freelancer_id: string; cover_letter: string; price: number; delivery_days: number; revisions_included: number; status?: Database["public"]["Enums"]["proposal_status"]; status_reason?: string | null; decided_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { cover_letter?: string; price?: number; delivery_days?: number; revisions_included?: number; status?: Database["public"]["Enums"]["proposal_status"]; status_reason?: string | null; decided_at?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "proposals_job_id_fkey"; columns: ["job_id"]; isOneToOne: false; referencedRelation: "jobs"; referencedColumns: ["id"] },
+          { foreignKeyName: "proposals_freelancer_id_fkey"; columns: ["freelancer_id"]; isOneToOne: false; referencedRelation: "freelancer_profiles"; referencedColumns: ["user_id"] },
+        ]
+      }
+      orders: {
+        Row: { id: string; order_number: number; source: Database["public"]["Enums"]["order_source"]; service_id: string | null; job_id: string | null; proposal_id: string | null; client_id: string; freelancer_id: string; title: string; brief: string; requirements: string | null; amount: number; platform_fee: number; freelancer_earnings: number; delivery_days: number; revisions_allowed: number; revisions_used: number; status: Database["public"]["Enums"]["order_status"]; payment_due_at: string; paid_at: string | null; due_at: string | null; delivered_at: string | null; completed_at: string | null; cancelled_at: string | null; cancelled_by: string | null; cancellation_reason: string | null; payout_status: Database["public"]["Enums"]["payout_status"]; payout_reference: string | null; payout_marked_by: string | null; payout_marked_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; source: Database["public"]["Enums"]["order_source"]; service_id?: string | null; job_id?: string | null; proposal_id?: string | null; client_id: string; freelancer_id: string; title: string; brief: string; requirements?: string | null; amount: number; platform_fee: number; freelancer_earnings: number; delivery_days: number; revisions_allowed: number; revisions_used?: number; status?: Database["public"]["Enums"]["order_status"]; payment_due_at: string; created_at?: string; updated_at?: string }
+        Update: { status?: Database["public"]["Enums"]["order_status"]; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "orders_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "orders_freelancer_id_fkey"; columns: ["freelancer_id"]; isOneToOne: false; referencedRelation: "freelancer_profiles"; referencedColumns: ["user_id"] },
+          { foreignKeyName: "orders_job_id_fkey"; columns: ["job_id"]; isOneToOne: false; referencedRelation: "jobs"; referencedColumns: ["id"] },
+          { foreignKeyName: "orders_proposal_id_fkey"; columns: ["proposal_id"]; isOneToOne: true; referencedRelation: "proposals"; referencedColumns: ["id"] },
+          { foreignKeyName: "orders_service_id_fkey"; columns: ["service_id"]; isOneToOne: false; referencedRelation: "services"; referencedColumns: ["id"] },
+          { foreignKeyName: "orders_cancelled_by_fkey"; columns: ["cancelled_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "orders_payout_marked_by_fkey"; columns: ["payout_marked_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
+      order_events: {
+        Row: { id: number; order_id: string; actor_id: string | null; event_type: string; from_status: Database["public"]["Enums"]["order_status"] | null; to_status: Database["public"]["Enums"]["order_status"] | null; payload: Json; created_at: string }
+        Insert: { id?: never; order_id: string; actor_id?: string | null; event_type: string; from_status?: Database["public"]["Enums"]["order_status"] | null; to_status?: Database["public"]["Enums"]["order_status"] | null; payload?: Json; created_at?: string }
+        Update: { id?: never }
+        Relationships: [
+          { foreignKeyName: "order_events_order_id_fkey"; columns: ["order_id"]; isOneToOne: false; referencedRelation: "orders"; referencedColumns: ["id"] },
+          { foreignKeyName: "order_events_actor_id_fkey"; columns: ["actor_id"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ]
+      }
       student_verifications: {
         Row: {
           created_at: string
@@ -381,6 +422,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      close_job: {
+        Args: { p_job_id: string; p_reason?: string }
+        Returns: Database["public"]["Tables"]["jobs"]["Row"]
+        SetofOptions: { from: "*"; to: "jobs"; isOneToOne: true; isSetofReturn: false }
+      }
+      submit_proposal: {
+        Args: { p_job_id: string; p_cover_letter: string; p_price: number; p_delivery_days: number; p_revisions_included: number }
+        Returns: Database["public"]["Tables"]["proposals"]["Row"]
+        SetofOptions: { from: "*"; to: "proposals"; isOneToOne: true; isSetofReturn: false }
+      }
+      withdraw_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: Database["public"]["Tables"]["proposals"]["Row"]
+        SetofOptions: { from: "*"; to: "proposals"; isOneToOne: true; isSetofReturn: false }
+      }
+      reject_proposal: {
+        Args: { p_proposal_id: string; p_reason?: string }
+        Returns: Database["public"]["Tables"]["proposals"]["Row"]
+        SetofOptions: { from: "*"; to: "proposals"; isOneToOne: true; isSetofReturn: false }
+      }
+      accept_proposal: { Args: { p_proposal_id: string }; Returns: string }
+      cancel_order: { Args: { p_order_id: string; p_reason: string }; Returns: string[] }
       set_service_status: {
         Args: { p_service_id: string; p_status: Database["public"]["Enums"]["service_status"] }
         Returns: Database["public"]["Tables"]["services"]["Row"]
@@ -397,6 +460,11 @@ export type Database = {
       verification_method: "email_domain" | "document"
       verification_status: "pending" | "approved" | "rejected"
       service_status: "draft" | "published" | "paused" | "archived"
+      job_status: "open" | "hiring" | "filled" | "closed"
+      proposal_status: "submitted" | "accepted" | "rejected" | "withdrawn"
+      order_source: "service" | "job"
+      order_status: "awaiting_payment" | "in_progress" | "delivered" | "completed" | "cancelled" | "disputed"
+      payout_status: "none" | "pending" | "paid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -536,6 +604,12 @@ export const Constants = {
       ],
       verification_method: ["email_domain", "document"],
       verification_status: ["pending", "approved", "rejected"],
+      service_status: ["draft", "published", "paused", "archived"],
+      job_status: ["open", "hiring", "filled", "closed"],
+      proposal_status: ["submitted", "accepted", "rejected", "withdrawn"],
+      order_source: ["service", "job"],
+      order_status: ["awaiting_payment", "in_progress", "delivered", "completed", "cancelled", "disputed"],
+      payout_status: ["none", "pending", "paid"],
     },
   },
 } as const

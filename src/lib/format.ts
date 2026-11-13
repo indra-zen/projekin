@@ -41,3 +41,12 @@ export function isoDateInMonths(
   d.setUTCMonth(d.getUTCMonth() + months);
   return new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(d);
 }
+
+/** Human-readable order code, e.g. PJK-000123. */
+export function formatOrderCode(orderNumber: number): string {
+  return `PJK-${String(orderNumber).padStart(6, "0")}`;
+}
+
+export function formatBudgetRange(min: number, max: number): string {
+  return min === max ? formatIdr(min) : `${formatIdr(min)} – ${formatIdr(max)}`;
+}

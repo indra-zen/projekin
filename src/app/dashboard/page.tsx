@@ -96,11 +96,16 @@ export default async function DashboardPage() {
                 Memposting pekerjaan dan menerima proposal
               </Capability>
             </ul>
-            <Button variant="outline" asChild>
-              <Link href="/services">
-                Jelajahi jasa <ArrowUpRight className="ml-2 size-4" />
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link href="/dashboard/jobs/new">Posting pekerjaan</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/services">
+                  Jelajahi jasa <ArrowUpRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

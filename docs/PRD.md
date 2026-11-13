@@ -199,9 +199,9 @@ Priority is **M** (must, MVP) unless marked **S** (should, MVP if time allows).
 
 | ID | Requirement |
 |---|---|
-| FR-JOB-01 | Any onboarded client posts a job: title (10–100 characters), category, description (50–5.000 characters), budget min/max (BR-07, min ≤ max), optional deadline (a future date). |
+| FR-JOB-01 | Any onboarded client posts a job: title (10–100 characters), category, description (50–5.000 characters), optional requirements (≤ 3.000 characters), budget min/max (BR-07, min ≤ max), optional deadline (a future date). |
 | FR-JOB-02 | Public listing `/jobs` shows `open` jobs, with search, category, budget filter, sort (newest, budget) and pagination. |
-| FR-JOB-03 | The client edits the job under BR-30, and can close it while it is `open`. Closing rejects all `submitted` proposals. |
+| FR-JOB-03 | The client edits the job under BR-30, and can close (cancel) it while it is `open`, with an optional reason. Closing rejects all `submitted` proposals. A job in `hiring` is reopened by cancelling the unpaid order. |
 | FR-PROP-01 | Verified students submit one proposal per open job (not their own): cover letter (50–3.000 characters), price (BR-07), delivery days, included revisions. Budget is advisory: price outside the range is allowed and flagged in the UI. |
 | FR-PROP-02 | The freelancer sees their proposals and statuses, and can withdraw a `submitted` proposal. |
 | FR-PROP-03 | The job owner sees all proposals on their job, with the freelancer's profile summary and rating, and can reject a proposal. |

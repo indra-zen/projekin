@@ -14,25 +14,32 @@
 |---|---|---|
 | Foundation (Phase 0 subset) | Done (Copilot, `46b1093`) | Next.js 16, strict TS, Tailwind, shadcn/ui config, layout, placeholder pages |
 | Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow. Migrations applied to the hosted dev project; `src/types/database.ts` generated from it (matches the migrations: 5 tables, 4 RPCs, 4 enums, no private helpers exposed). **Manually verified on hosted dev by the product owner (2026-11-13):** register, login, onboarding, file upload, student verification. |
-| Still open from Phases 0–3 | Not started | Portfolio CRUD (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, translating the pre-existing landing and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
+| Service marketplace (Phase 4, partial) | Done (Copilot, `7485086`) + security fix (Claude Code) | `services`, `categories`, `portfolio_items` (read-only), `service_listings`, `service-media` bucket, `set_service_status`, `/services`, `/dashboard/services`. **Fix `20261113080700_services_hardening.sql`:** the Copilot migration left Supabase's default `ALL` grants in place, so owners could set `status`/`blocked_at` directly and bypass publishing rules and admin blocks. The fix revokes them, recreates `set_service_status` as `SECURITY DEFINER`, aligns the publish limit to BR-15 (20), and adds admin read. Covered by `tests/db/services.test.ts`. |
+| Job marketplace & proposals (Phase 5) + order creation | Done on `feature/auth-profiles` (Claude Code) | `jobs` (with `requirements`), `proposals`, unified `orders`, `order_events`; RLS + column grants; RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`, `accept_proposal` (locks the job row; one live order per job enforced by a unique index), `cancel_order` (pre-payment only). Pages `/jobs` (search, category and budget filters, sort, pagination), `/jobs/[id]` (proposal form), `/dashboard/jobs` (+ new, edit, manage with accept/reject), `/dashboard/proposals`, `/dashboard/orders` (+ detail with cancel). Tests: `tests/db/jobs.test.ts`, `tests/unit/jobs.test.ts`. **Not yet applied to hosted dev; types for the new tables are hand-written until regenerated.** |
+| Still open | Not started | Portfolio CRUD (FR-PORT-01); admin moderation UI (service block, freelancer suspension); payments (Phase 6: Midtrans, `expire_unpaid_orders` cron, `create_service_order`); order fulfilment (Phase 7); reviews (Phase 8); Playwright E2E; translating the landing page to Bahasa Indonesia; Prettier formatting of Copilot's 9 service files (`npm run format:check` fails on them) |
 
-### 0.1 Known issues (identity milestone)
+### 0.1 Known issues
 
-- **CI has not run yet.** `.github/workflows/ci.yml` (including the job that applies migrations to a real Supabase stack) runs only once the branch is pushed. Watch the first run.
-- **Database tests use PGlite plus a Supabase shim.** The hosted push and the generated types confirm the SQL on real Supabase, but RLS behaviour is asserted only in PGlite. Playwright E2E against a real stack is still missing.
-- **"Publish service" / "submit proposal" are gated in the UI and by `guardVerifiedFreelancer()`**, but their tables do not exist yet. Their RLS/RPCs must call `private.is_eligible_freelancer(auth.uid())` (BR-01) when built.
-- **Email links opened on another device** need the token-hash email templates (README step 4). The default PKCE link only works in the browser that registered.
-- **`npm audit`:** 7 moderate advisories in the dev-only ESLint/typescript-eslint chain (`minimatch`). They already existed in the foundation lockfile. Production dependencies: 0.
-- **Changing the password from settings** (`/reset-password` while signed in) does not ask for the current password. Consider enabling Supabase "Secure password change".
+- **Migrations `080600`–`080800` are not applied to hosted dev yet.** Push them, then regenerate `src/types/database.ts` (the entries for jobs, proposals, orders and order_events are hand-written in generator format).
+- **Hires wait in `awaiting_payment` with no payment flow yet.** The job stays in `hiring` until the client or freelancer cancels the order. The 24-hour auto-expiry (`expire_unpaid_orders` + `pg_cron`) arrives with payments (Phase 6), because without a way to pay it would cancel every hire.
+- **Race-condition tests are sequential.** PGlite has a single connection, so "conflicting hires" is tested as double-accept plus the unique-index backstop (`orders_one_live_order_per_job`), not as truly parallel transactions. The row locks (`FOR UPDATE` on accept/close, `FOR SHARE` on submit) are designed for concurrency but only exercised on a real database.
+- **CI has not run yet.** It runs once the branch is pushed, including the job that applies all migrations to a real Supabase stack.
+- **Database tests use PGlite plus a Supabase shim.** Playwright E2E against a real stack is still missing.
+- **Email links opened on another device** need the token-hash email templates (README step 4).
+- **`npm audit`:** 7 moderate advisories in the dev-only ESLint chain (pre-existing). Production dependencies: 0.
+- **Lint:** 2 `no-img-element` warnings in Copilot's service pages.
+- **Changing the password from settings** does not ask for the current password (consider Supabase "Secure password change").
 
-### 0.2 Next task handoff (for GitHub Copilot)
+### 0.2 Next task handoff
 
-**Task: finish Phase 3: portfolio and admin freelancer suspension.** Do not start Phase 4.
+**For GitHub Copilot: finish Phase 4 (portfolio CRUD and admin moderation).** Do not start payments.
 
-1. **Migration** `supabase/migrations/<timestamp>_portfolio.sql`: the `portfolio_items` table exactly as in DATABASE §4.6, with RLS and grants as in DATABASE §9–§10 (public read; owner insert/update/delete with `freelancer_id = auth.uid()`). Add the `portfolio` public bucket and own-folder policies (DATABASE §11) and RPC `set_freelancer_status` (DATABASE §7.2, admin only). Follow the existing identity migrations for patterns: `revoke all` before grants, `(select auth.uid())`, `SECURITY DEFINER SET search_path = ''`, `PJxxx` error codes, Indonesian messages added to `src/server/error-messages.ts` (a unit test fails otherwise).
-2. **Tests first** in `tests/db/` using `tests/db/harness.ts`: anon/stranger/owner/admin for every operation, the 5-image limit, non-freelancers cannot insert, non-admins cannot call `set_freelancer_status`, and suspension hides eligibility.
-3. **Actions** in `src/server/actions/` (`useActionState` signature, Zod schemas in `src/lib/validation/`, `isOwnObjectPath` for image paths, `guardOnboarded`/`guardAdmin`), plus a page at `/dashboard/portfolio`, a portfolio section on `/u/[username]`, and a suspend/reactivate control on the admin verification detail page. UI copy in Bahasa Indonesia.
-4. `npx supabase db push` to dev, regenerate `src/types/database.ts`, then run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and update docs §0.
+1. **Migration** (new file; never edit applied ones): RPCs `set_freelancer_status` and `admin_set_service_block` (DATABASE §7.2, admin only), plus the `portfolio` bucket and own-folder policies (DATABASE §11). `portfolio_items` already exists with RLS and correct grants (`080600` + `080700`). Patterns to follow: `revoke all` **before** any grant, `SECURITY DEFINER SET search_path = ''`, `PJxxx` codes with `message = 'REASON'`, and an Indonesian message for every reason (`src/server/error-messages.ts`; a unit test enforces this).
+2. **Database tests first** with `tests/db/harness.ts` (`makeFreelancer`, `makeAdmin`, `as`, `expectPgError`): anon, stranger, owner and admin for every operation; the 5-image limit; non-admins cannot block or suspend; a blocked service cannot be republished.
+3. **Actions and UI:** portfolio CRUD at `/dashboard/portfolio` (uploads via `isOwnObjectPath`), and suspend/reactivate plus block/unblock controls in `/admin`. Bahasa Indonesia copy. Run Prettier on the files you touch.
+4. Push to dev, regenerate types, then run `lint`, `typecheck`, `test`, `build` and update this section.
+
+**After that (Claude Code recommended): Phase 6, payments** (Midtrans Snap Sandbox, webhook, `create_service_order`, `expire_unpaid_orders`). It is security-critical, and the RPC and state-machine design is already in DATABASE §7–§8.
 
 ---
 
@@ -365,4 +372,6 @@ This section records the review of the five documents for contradictions and mis
 | 2026-11-13 | Schema added incrementally per phase (identity first) instead of the whole schema in Phase 1 | DATABASE §14 |
 | 2026-11-13 | Account-level verification states `unverified/pending/verified/rejected`, derived in SQL (never stored or client-writable) | DATABASE §3, §6.1, §7.2, §8.6 |
 | 2026-11-13 | Forms: Server Actions + `useActionState` (no react-hook-form). DB tests: Vitest + PGlite (no pgTAP). `proxy.ts` replaces the deprecated `middleware.ts`. Route `/register` (existing) instead of `/signup`. | ARCHITECTURE §3, §5; API_CONTRACT §4.0, §5.2; IMPLEMENTATION_PLAN §4 |
+| 2026-11-13 | Jobs get an optional `requirements` field (product request) and `closed_reason`; "close" and "cancel" a posting are the same action (`close_job`, status `closed`). Job orders copy `requirements` from the job. `cancel_order` is implemented for `awaiting_payment` only until payments exist. | DATABASE §4.9, §4.11, §7.2; PRD FR-JOB-01/03 |
+| 2026-11-13 | Services hardening: revoke default grants, `set_service_status` as `SECURITY DEFINER`, publish limit 20 (BR-15) instead of Copilot's 10 | DATABASE §14 |
 | 2026-11-13 | Q6: seed Tarakan universities, starting with STMIK PPKIA Tarakanita Rahmawati and Universitas Borneo Tarakan, without email domains (document method) until confirmed. Reference data moved into a data migration. Category names in Bahasa Indonesia. | PRD §10.2; DATABASE §4.3, §13, §14 |

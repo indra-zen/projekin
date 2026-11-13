@@ -170,6 +170,10 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `getStudentDocumentUrl` | — (not an action) | The admin detail page creates the 60 s signed URL server-side with the admin's own session. |
 | `updateFreelancerProfile` | `updateFreelancerProfileAction` (`verification.ts`) | `skills` is submitted as a comma-separated string |
 | portfolio actions | not yet implemented | Next phase |
+| `createJob` / `updateJob` / `closeJob` | `createJobAction` / `updateJobAction` / `closeJobAction` (`jobs.ts`) | Jobs also take `requirements`. Create and update redirect to `/dashboard/jobs/{id}`. |
+| `submitProposal` / `withdrawProposal` | `submitProposalAction` / `withdrawProposalAction({ proposalId })` | `submitProposalAction` uses `guardVerifiedFreelancer()` (database state) before the RPC |
+| `rejectProposal` / `acceptProposal` | `rejectProposalAction` / `acceptProposalAction` | Accept redirects to `/dashboard/orders/{orderId}` |
+| `cancelOrder` | `cancelOrderAction` | `awaiting_payment` only, until payments (no Midtrans expire call yet) |
 
 Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
 

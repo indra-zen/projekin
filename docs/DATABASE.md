@@ -225,9 +225,11 @@ The `'simple'` text-search config is used because Postgres has no built-in Indon
 | description | text | NN, 50–5000 chars. Grant (upd) |
 | budget_min | bigint | NN, BR-07 range. Grant (upd) |
 | budget_max | bigint | NN, BR-07 range, `CHECK (budget_min <= budget_max)`. Grant (upd) |
-| deadline | date | Nullable. Must be `>= current_date` on insert/update (RLS `WITH CHECK`). Grant (upd) |
+| requirements | text | Optional, `≤ 3000` chars. Copied to the order on hire. Grant (upd) |
+| deadline | date | Nullable. Must be `>=` today (Asia/Jakarta) on insert/update (RLS `WITH CHECK`, `private.today_jakarta()`). Grant (upd) |
 | status | job_status | NN, default `'open'`. Changed via RPC only. |
 | closed_at | timestamptz | |
+| closed_reason | text | Optional reason given in `close_job`, `≤ 500` chars |
 | search | tsvector | Generated, same as services |
 | created_at, updated_at | timestamptz | NN |
 
@@ -265,7 +267,7 @@ The unified order for both flows.
 | freelancer_id | uuid | NN, FK → `freelancer_profiles(user_id)` ON DELETE RESTRICT |
 | title | text | NN. Snapshot of service or job title. |
 | brief | text | NN. Snapshot of service description or job description. |
-| requirements | text | Client's requirements (service orders: NN by RPC, 10–5000 chars). Null for job orders. |
+| requirements | text | Service orders: the client's requirements (10–5000 chars, set by `create_service_order`). Job orders: copied from `jobs.requirements` (may be null). |
 | amount | bigint | NN, BR-07 range. Price the client pays (BR-09). |
 | platform_fee | bigint | NN, `>= 0` |
 | freelancer_earnings | bigint | NN, `>= 0` |
@@ -550,7 +552,8 @@ The `MESSAGE` is a stable machine-readable reason (e.g. `ORDER_NOT_AWAITING_PAYM
 | `set_service_status(p_service_id uuid, p_status service_status) → services` | A (owner) | Allowed transitions: `draft→published`, `paused→published`, `published→paused`, `draft\|published\|paused→archived`. Publishing requires `is_eligible_freelancer(auth.uid())`, `blocked_at IS NULL`, `cover_image_path IS NOT NULL`, and published count < `max_published_services()`. Sets `published_at` on first publish. |
 | `admin_set_service_block(p_service_id uuid, p_blocked boolean, p_reason text DEFAULT NULL) → services` | A (admin) | Block: sets `blocked_at` and `blocked_reason` (reason required), and moves `published` to `paused`. Unblock: clears both. Status stays paused. |
 | `close_job(p_job_id uuid, p_reason text DEFAULT NULL) → jobs` | A (owner or admin) | Job `open` → `closed`, `closed_at`. All `submitted` proposals → `rejected` (`status_reason = 'job_closed'`). |
-| `submit_proposal(p_job_id uuid, p_cover_letter text, p_price bigint, p_delivery_days smallint, p_revisions_included smallint) → proposals` | A | Onboarded and eligible freelancer (BR-01). Job `open`. `client_id <> auth.uid()` (BR-06). Proposals by caller in the last 24h < `max_proposals_per_day()` (BR-14) → inserts `submitted`. Unique violation → `CONFLICT ALREADY_PROPOSED`. |
+| `submit_proposal(p_job_id uuid, p_cover_letter text, p_price bigint, p_delivery_days integer, p_revisions_included integer) → proposals` | A | Onboarded and eligible freelancer (BR-01). Job `open`. `client_id <> auth.uid()` (BR-06). Proposals by caller in the last 24h < `max_proposals_per_day()` (BR-14) → inserts `submitted`. Unique violation → `CONFLICT ALREADY_PROPOSED`. |
+|  | | Locks the job `FOR SHARE`, so a concurrent `close_job`/`accept_proposal` (`FOR UPDATE`) cannot interleave. |
 | `withdraw_proposal(p_proposal_id uuid) → proposals` | A (proposal owner) | `submitted` → `withdrawn`, `decided_at`. |
 | `reject_proposal(p_proposal_id uuid, p_reason text DEFAULT NULL) → proposals` | A (job owner) | `submitted` → `rejected`. |
 | `accept_proposal(p_proposal_id uuid) → uuid` (order id) | A (job owner) | Locks job, proposal. Job `open`. Proposal `submitted`. Freelancer still eligible (`PJ403 FREELANCER_NOT_ELIGIBLE`). Caller's `awaiting_payment` orders < `max_awaiting_payment_orders()` (BR-12) → proposal `accepted`, job `hiring`, insert order (`source='job'`, terms from proposal, `title`/`brief` from job, amounts per BR-09, `payment_due_at = now() + payment_window()`), event `created`. |
@@ -560,6 +563,7 @@ The `MESSAGE` is a stable machine-readable reason (e.g. `ORDER_NOT_AWAITING_PAYM
 | `fail_payment_attempt(p_payment_id uuid, p_reason text) → payments` | S | `initiated` → `failed` (Snap API call failed). |
 | `apply_payment_status(p_midtrans_order_id text, p_transaction_status text, p_fraud_status text, p_status_code text, p_gross_amount bigint, p_payment_type text, p_transaction_id text) → text` | S | See §8.2. Returns a `processing_result` value. Idempotent. |
 | `cancel_order(p_order_id uuid, p_reason text) → text[]` (`midtrans_order_id`s of attempts that were live) | A | **Client, freelancer or admin:** status `awaiting_payment`. **Freelancer:** also status `in_progress` with no `order_deliveries` row (BR-20). Effects: order `cancelled`, `cancelled_at`, `cancelled_by`, reason. Live attempts → `cancelled`. If a `paid` payment exists, its `refund_status` → `pending` (BR-24). Job orders cancelled **before payment**: job `hiring` → `open`, proposal → `rejected` (`hire_cancelled`). Job orders cancelled **after payment**: job stays `filled`. Event `cancelled`. |
+|  | | **Implemented so far (`080800`):** the `awaiting_payment` branch (client, freelancer or admin; reopens the job; returns `'{}'`). The paid-order freelancer cancellation and refund marking arrive with payments. |
 | `deliver_order(p_order_id uuid, p_message text, p_attachment_paths text[]) → order_deliveries` | A (freelancer) | Status `in_progress`. ≤ 10 paths. Each path starts with `p_order_id || '/' || auth.uid() || '/'` and exists in `storage.objects` (bucket `order-files`) → inserts delivery (`delivery_number` = count + 1). Order → `delivered`, `delivered_at = now()`. Event `delivered`. |
 | `request_revision(p_order_id uuid, p_message text) → orders` | A (client) | Status `delivered`. `revisions_used < revisions_allowed` (else `PJ409 NO_REVISIONS_LEFT`). Message 1–5000 chars → `in_progress`, `revisions_used + 1`. Event `revision_requested` with `{message}`. |
 | `complete_order(p_order_id uuid) → orders` | A (client) | Status `delivered` → `completed`, `completed_at`, `payout_status = 'pending'`. Event `completed`. |
@@ -849,6 +853,9 @@ Migrations live in `supabase/migrations/` (Supabase CLI, timestamped).
 | `20261113080300_identity_rpc.sql` | `complete_onboarding`, `get_my_verification_status`, `submit_student_verification`, `review_student_verification` |
 | `20261113080400_identity_storage.sql` | buckets `avatars`, `student-documents` and their policies |
 | `20261113080500_reference_data_universities.sql` | Tarakan universities (§13) |
+| `20261113080600_services_marketplace.sql` (Copilot) | `service_status`, categories (seeded), services, portfolio_items, `service_listings`, `set_service_status`, `service-media` bucket |
+| `20261113080700_services_hardening.sql` | Revokes default grants on the `080600` objects, recreates `set_service_status` as `SECURITY DEFINER` (limit 20), admin read on services |
+| `20261113080800_jobs_proposals_orders.sql` | Enums `job_status`, `proposal_status`, `order_source`, `order_status`, `payout_status`; jobs, proposals, orders, order_events; helpers; RLS and grants; RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`, `accept_proposal`, `cancel_order` |
 
 The remaining tables follow this order as their phases arrive:
 
