@@ -1,0 +1,324 @@
+# Projekin — Implementation Plan
+
+| | |
+|---|---|
+| Status | Draft for approval |
+| Version | 0.1 (2026-11-13) |
+| Related | [PRD.md](PRD.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md), [API_CONTRACT.md](API_CONTRACT.md) |
+
+---
+
+## 1. Working agreement
+
+- **Sequential agents.** Claude Code and GitHub Copilot work one at a time. Before starting a phase, an agent reads `CLAUDE.md` and this plan, checks `git status`/`git log`, and confirms that the previous phase's exit criteria are met. It does not assume unfinished work is complete.
+- **Branching.** One branch per phase: `phase-<n>-<slug>`. Commit at meaningful milestones inside the phase. Open a PR at the end of the phase. No merges without review. No force-push. No history rewriting.
+- **Docs first.** If implementation needs a decision that differs from these documents, update the relevant document in the same PR and note it in §6 (Decision log).
+- **Database changes** are new migration files only. Destructive changes need explicit approval.
+- **Each phase ends green:** `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:db`, `npm run build` (and `npm run test:e2e` from Phase 4 on). Results are reported as they actually ran.
+
+---
+
+## 2. Prerequisites and decisions needed before Phase 1
+
+| # | Item | Owner | Blocking |
+|---|---|---|---|
+| P1 | Approve this blueprint (or list changes) | Product owner | Phase 0 |
+| P2 | Decide on Docker in the dev container (add the `docker-in-docker` feature) **or** provide a hosted dev Supabase project ([ARCHITECTURE §4](ARCHITECTURE.md#4-environments-and-configuration)) | Product owner | Phase 1 |
+| P3 | Supabase projects (dev, prod) and Midtrans Sandbox account keys, provided as env vars only, never committed | Product owner | Phase 1 (Supabase), Phase 6 (Midtrans) |
+| P4 | Answers to PRD open questions Q1–Q7 (defaults are used until then) | Product owner | Not blocking |
+| P5 | University seed list with student email domains (Q6) | Product owner | Phase 3 (seed placeholders until then) |
+
+---
+
+## 3. Phases
+
+Each phase lists its **scope**, **tasks**, **tests** and **exit criteria**. Estimates assume one agent working sequentially and are only indicative.
+
+### Phase 0: Project foundation (≈ 1 day)
+
+**Scope.** An empty but production-shaped Next.js app.
+
+Tasks:
+1. `create-next-app` (TypeScript, App Router, `src/`, Tailwind, ESLint) with the latest stable Next.js. Pin exact versions.
+2. `tsconfig`: `strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`. Path alias `@/*`.
+3. shadcn/ui init. Add base components (button, input, textarea, label, form, card, badge, dialog, dropdown-menu, select, tabs, table, sonner, skeleton, avatar, separator).
+4. ESLint flat config: `typescript-eslint` strict, `no-restricted-imports` for `@/lib/supabase/admin` ([ARCHITECTURE §6.3](ARCHITECTURE.md#63-supabase-clients)), ban `dangerouslySetInnerHTML` (`react/no-danger`). Prettier.
+5. Vitest + Testing Library config. Playwright config (not yet used).
+6. `src/lib/env/{server,client}.ts` with Zod validation and the `MIDTRANS_IS_PRODUCTION=false` guard. `.env.example`.
+7. Supabase CLI: `supabase init`, `supabase/config.toml` (auth: confirm email on, site URL, redirect URLs).
+8. GitHub Actions CI: install → lint → typecheck → unit → build. (The DB test job is added in Phase 1.)
+9. npm scripts: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:db`, `test:e2e`, `db:types`.
+
+Tests: unit tests for env validation (rejects a missing key and rejects `MIDTRANS_IS_PRODUCTION=true`).
+
+Exit: CI green. App renders a placeholder home page. No secrets in the repo.
+
+### Phase 1: Database foundation (≈ 3 days)
+
+**Scope.** The complete schema, security model and storage. RPCs come later, phase by phase.
+
+Tasks (migrations in the order of [DATABASE §14](DATABASE.md#14-migration-plan), except `rpc_functions`, which is split across phases):
+1. Extensions, the `private` schema, enums.
+2. All tables, constraints, indexes, the `updated_at` trigger, and the `handle_new_user` trigger.
+3. `private` helpers and business-constant functions.
+4. RLS enabled on all tables. Policies per [DATABASE §9](DATABASE.md#9-rls-policy-matrix). Grants per §10.
+5. Views (`*_rating_stats`, `service_listings`).
+6. Storage buckets with size and MIME limits, and policies per §11.
+7. `pg_cron` extension enabled. Schedules are added in Phases 6–7, together with their functions.
+8. `seed.sql`: categories and placeholder universities. A local seed script creates test users (client, student-freelancer, admin).
+9. Generate `src/types/database.ts`.
+10. pgTAP test helpers: `tests.as_anon()`, `tests.as_user(uid)` (set `role` and `request.jwt.claims`), `tests.create_user(email)`.
+
+Tests (pgTAP):
+- Structure: tables, RLS enabled on **every** table (a query over `pg_class` asserting `relrowsecurity`), no table without policies except where intended.
+- RLS matrix: for every table and operation, anon, a stranger, the owner and an admin each produce the expected allow/deny.
+- Column grants: an owner cannot update `status`, `verified_until`, `blocked_at`, `onboarded_at` or money columns.
+- Storage: path-prefix policies for each bucket. `student-documents` is not readable by other users.
+
+Exit: `supabase db reset` applies cleanly. `npm run test:db` is green. CI runs DB tests (Supabase CLI in GitHub Actions).
+
+### Phase 2: Auth, onboarding, profiles (≈ 2 days)
+
+Tasks:
+1. Supabase clients (`browser`, `server`, `admin`), `proxy.ts` session refresh, `requireUser`/`requireOnboarded`/`requireAdmin`.
+2. `/signup`, `/login`, `/forgot-password`, `/reset-password`, `/auth/confirm`, sign-out.
+3. RPC `complete_onboarding` plus `/onboarding`.
+4. `/dashboard/settings/profile` (avatar upload to `avatars`), public `/u/[username]` (profile section only).
+5. `src/server/errors.ts` mapping and `ActionResult` types.
+6. Layouts: public header (auth-aware), dashboard shell, admin shell (`notFound` for non-admins).
+
+Tests: unit (safe `next` redirect, error mapping); pgTAP (`complete_onboarding`); integration (actions reject unauthenticated calls); E2E (J1 sign-up → confirm via the local Inbucket/Mailpit → onboarding).
+
+Exit: J1 works locally. Protected routes redirect. Admin routes 404 for non-admins.
+
+### Phase 3: Student verification, freelancer profile, portfolio (≈ 3 days)
+
+Tasks:
+1. RPCs `submit_student_verification`, `review_student_verification`, `set_freelancer_status`.
+2. `/dashboard/verification` (both methods, status display, renewal).
+3. `/admin/verifications` (+ detail with signed document URL).
+4. `/dashboard/freelancer` and `/dashboard/portfolio`. Portfolio and freelancer sections on `/u/[username]`.
+5. Verified-student badge component.
+
+Tests: pgTAP (auto-approval only for a confirmed exact-domain match; a pending-request conflict; renewal window; admin-only review; approval upserts `freelancer_profiles`; suspended status preserved); integration (document path must belong to the caller); E2E (J2 both paths).
+
+Exit: a student can become an eligible freelancer by both methods. Non-students cannot.
+
+### Phase 4: Service marketplace (≈ 3 days)
+
+Tasks:
+1. RPCs `set_service_status`, `admin_set_service_block`.
+2. `/dashboard/services` (list, new, edit, publish, pause, archive, delete draft) with cover upload.
+3. `/services` (search, filters, sort, pagination using `service_listings`) and `/services/[id]`.
+4. Landing page sections.
+5. `/admin/moderation` (service block, freelancer suspend).
+
+Tests: pgTAP (publish preconditions; hidden when the freelancer is ineligible, suspended or blocked; publish limit); unit (search param parsing); E2E (J3; browse and search).
+
+Exit: published services are discoverable. Visibility rules hold.
+
+### Phase 5: Job marketplace and proposals (≈ 3 days)
+
+Tasks:
+1. RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`. (`accept_proposal` comes in Phase 6, because it creates orders.)
+2. `/dashboard/jobs` (new, edit under BR-30, close), `/jobs`, `/jobs/[id]` with the proposal form and eligibility messaging.
+3. `/dashboard/jobs/[id]` (proposal review list), `/dashboard/proposals`.
+4. Admin `closeJob` in moderation.
+
+Tests: pgTAP (own-job proposal blocked; duplicate blocked; daily limit; job edit blocked after the first proposal; proposals visible only to the owner and the job owner; RLS recursion check: querying jobs and proposals as each role does not error); E2E (J6; J5 up to the hire button).
+
+Exit: jobs and proposals work end to end, except hiring.
+
+### Phase 6: Orders and payments (≈ 5 days)
+
+**Scope.** Order creation for both flows, plus Midtrans Snap payment until `in_progress`.
+
+Tasks:
+1. RPCs `create_service_order`, `accept_proposal`, `create_payment_attempt`, `attach_snap_token`, `fail_payment_attempt`, `apply_payment_status`, `cancel_order`, `expire_unpaid_orders` + `pg_cron` schedule.
+2. `src/server/payments/*`: Midtrans client, signature verification, status map, `syncAndApply`.
+3. Actions `createServiceOrder`, `acceptProposal`, `startPayment`, `syncPaymentStatus`, `cancelOrder`.
+4. Route handlers: Midtrans notification and reconcile cron. `vercel.json` cron.
+5. `/services/[id]/order`, the hire confirmation dialog, `/dashboard/orders` (list) and `/dashboard/orders/[id]` (summary, payment panel, pay button with Snap.js, cancel, payment history).
+
+Tests:
+- Unit: signature (valid, tampered field, wrong key); status mapping table (every row of DATABASE §8.2); Snap request builder (amount equals item sum, expiry ≤ due, name truncation); `gross_amount` parsing.
+- pgTAP: amounts and fee computed from DB; BR-06/BR-12 limits; `accept_proposal` atomicity (job `hiring`, unique live order per job); every `apply_payment_status` branch (paid → in_progress and job filled and proposals rejected; late payment → refund pending; duplicate → refund pending; regression ignored; amount mismatch; unknown); `cancel_order` pre-payment reopens the job; `expire_unpaid_orders`; RPCs denied for anon and non-parties; service-role-only functions denied for `authenticated`.
+- Integration: notification route with mocked Midtrans (`fetch` mocked): invalid signature → 401 and no change; valid → Status API consulted → applied; Status API down → 500.
+- E2E: J4 and J5 through to `in_progress`. The payment is simulated by a test fixture that calls `apply_payment_status` through the service role (no production mock mode). The real Snap popup is tagged `@sandbox` and run manually.
+
+Exit: both flows reach `in_progress` only through verified payment status. Manual sandbox checklist §4.6 items 1–6 pass.
+
+### Phase 7: Order fulfilment (≈ 3 days)
+
+Tasks:
+1. RPCs `deliver_order`, `request_revision`, `complete_order`, `open_dispute`, `auto_complete_delivered_orders` + `pg_cron` schedule.
+2. Delivery form with uploads to `order-files`. Signed download links (`getOrderFileUrl`).
+3. Message thread (`sendOrderMessage`), activity timeline from `order_events`, deadline and overdue display.
+4. Freelancer cancellation before the first delivery (UI for the existing `cancel_order` rule). Dispute dialog.
+
+Tests: pgTAP (each transition, including the wrong-actor and wrong-state matrix; revision count; auto-complete; file path validation; message status gating); E2E (J7, J8 up to "disputed", J9).
+
+Exit: orders complete end to end through every path in [DATABASE §8.1](DATABASE.md#81-order) except admin resolution.
+
+### Phase 8: Reviews and ratings (≈ 1.5 days)
+
+Tasks: RPC `submit_review`. Review form on completed orders. Rating display on service cards and detail, profile, and proposal cards. Reviews lists.
+
+Tests: pgTAP (completed only; 14-day window; one per party; `service_id` only for client reviews of service orders); E2E (review after J7).
+
+Exit: ratings appear correctly on all surfaces.
+
+### Phase 9: Admin money operations and earnings (≈ 2 days)
+
+Tasks: RPCs `resolve_dispute`, `mark_refund_completed`, `mark_payout_paid`. `/admin/disputes`, `/admin/refunds`, `/admin/payouts`, `/admin` overview counts. `/dashboard/earnings`.
+
+Tests: pgTAP (admin-only; resolution outcomes; refund and payout transitions; `payout_status` constraint); E2E (J8 resolution, J10).
+
+Exit: every money-affecting state can be closed out by an admin.
+
+### Phase 10: Hardening and launch (≈ 3 days)
+
+Tasks:
+1. Security review against the [risk register](ARCHITECTURE.md#122-risk-register). Run `/security-review`. Fix findings.
+2. CSP in Report-Only → tune for Snap and Supabase → enforce.
+3. Accessibility pass (keyboard, labels, contrast) on core flows. Responsive check at 360 px.
+4. Error and empty states. `error.tsx` and `not-found.tsx` everywhere.
+5. Deploy: Supabase prod migrations, Vercel env, Midtrans notification URL, first admin user ([ARCHITECTURE §14](ARCHITECTURE.md#14-deployment)).
+6. Full manual sandbox QA (§4.6) on the deployed environment.
+7. Update the README with setup and run instructions.
+
+Exit: all CI checks green. The QA checklist passes on production (sandbox). Known issues documented.
+
+**Total indicative effort:** ≈ 29.5 agent-days.
+
+---
+
+## 4. Testing strategy
+
+### 4.1 Layers
+
+| Layer | Tool | What | Runs |
+|---|---|---|---|
+| Static | `tsc --noEmit`, ESLint | Types, banned patterns (admin client imports, `dangerouslySetInnerHTML`) | Every push |
+| Unit | Vitest | Pure logic: Zod schemas, signature, status map, Snap body builder, formatting, safe redirect, error mapping, env guard | Every push |
+| Database | pgTAP via `supabase test db` | RLS matrix, column grants, storage policies, every RPC (happy path + wrong actor + wrong state + limits), constraints, cron functions | Every push (CI starts the local Supabase stack) |
+| Integration | Vitest + local Supabase | Route handlers called as functions with `Request` objects. Actions' auth and validation behaviour. Real user JWTs from seeded users. Midtrans HTTP mocked by stubbing `fetch`. | Every push |
+| E2E | Playwright | Journeys J1–J10 against `next build && next start` + local Supabase. Payment simulated by a service-role fixture. | PRs to `main` |
+| Sandbox E2E | Playwright `@sandbox` tag + manual | Real Snap popup and sandbox payment methods | Manual before release |
+
+### 4.2 Database test conventions
+
+- One file per area: `supabase/tests/rls_<table>.test.sql`, `rpc_<function>.test.sql`, `storage.test.sql`, `structure.test.sql`.
+- Each test runs in a transaction (`begin; select plan(n); … select * from finish(); rollback;`).
+- Impersonation: `set local role authenticated; set local request.jwt.claims = '{"sub":"<uuid>","role":"authenticated"}';`, wrapped in helpers.
+- **RLS coverage rule:** every cell of the [DATABASE §9](DATABASE.md#9-rls-policy-matrix) matrix has at least one positive and one negative assertion.
+- **RPC coverage rule:** every precondition listed in [DATABASE §7.2](DATABASE.md#72-function-catalogue) has a test that it raises the documented SQLSTATE and reason.
+- Concurrency (best effort): double `accept_proposal` and pay-vs-cancel races are covered through constraint tests (unique live order per job, one live attempt). True parallel-session tests are optional.
+
+### 4.3 Payment-specific test matrix
+
+| Scenario | Expected |
+|---|---|
+| Valid `settlement` notification, Status API agrees | Payment `paid`, order `in_progress`, `due_at` set |
+| Notification with tampered `gross_amount` | 401, no change, logged `signature_valid=false` |
+| Valid signature but Status API returns a different amount | `amount_mismatch`, 200, no change |
+| Duplicate `settlement` notification | `no_change` |
+| `pending` after `paid` | `ignored_regression` |
+| `expire` on a live attempt | Attempt `expired`, order still `awaiting_payment`, retry allowed |
+| Settlement after the order was cancelled | Payment `paid`, `refund_status='pending'`, event `late_payment_detected` |
+| Second attempt paid | `duplicate_payment_detected`, refund pending |
+| Unknown `order_id` | 200 `unknown_payment` |
+| Status API timeout | 500 (Midtrans will retry) |
+| Snap create fails | Attempt `failed`, `PAYMENT_PROVIDER_ERROR`, retry creates attempt 2 |
+| 6th attempt | `LIMIT_REACHED`/`MAX_PAYMENT_ATTEMPTS` |
+| `onSuccess` fired client-side but no transaction at Midtrans | Order stays `awaiting_payment` |
+
+### 4.4 Test data
+
+- `supabase/seed.sql` holds reference data only.
+- `tests/fixtures/` holds TypeScript factories that create users through the Auth admin API and data through RPCs (local only).
+- Never run tests against hosted projects.
+
+### 4.5 CI pipeline (GitHub Actions)
+
+```
+jobs:
+  quality:  npm ci → lint → typecheck → test (unit) → build
+  database: supabase start → supabase db reset → supabase test db → integration tests
+  e2e:      (PR to main) supabase start → build → playwright
+```
+
+Secrets in CI: none needed for these jobs (the local stack has well-known local keys, and Midtrans is mocked).
+
+### 4.6 Manual sandbox QA checklist
+
+Run against an environment whose Notification URL is configured. Take test card numbers, simulator URLs and OTPs from the **current Midtrans Sandbox testing documentation** at run time; they are not hard-coded here.
+
+1. Service order, card payment success → order `in_progress` (webhook) without refreshing.
+2. Service order, bank transfer VA → pending → pay through the Midtrans simulator → `in_progress`.
+3. Close Snap without paying → reopen "Pay" → same token reused.
+4. Card denied → attempt `failed` → retry works.
+5. Let an attempt expire (short-window environment or wait) → order auto-cancelled after the grace period.
+6. Job flow: hire → pay → job `filled`, other proposals rejected.
+7. Deliver → revision → deliver → accept → payout pending → admin marks paid.
+8. Freelancer cancels before delivery → refund pending → admin marks refunded (after refunding in the Midtrans dashboard).
+9. Dispute → refund outcome, and dispute → release outcome.
+10. Reviews both ways, ratings visible.
+11. Notification log shows signature-valid entries. A manually posted forged notification is rejected (401).
+
+---
+
+## 5. Definition of done (per phase / PR)
+
+- Scope tasks done. Docs updated if a decision changed.
+- Lint, typecheck, unit, DB, integration and build pass locally and in CI. E2E passes from Phase 4 on.
+- New RPCs and policies have pgTAP tests per the coverage rules in §4.2.
+- No secrets, no `console.log` of sensitive data, no `any` without a justification comment.
+- Completion report: what was implemented, files changed, tests run with actual results, known issues, remaining work, recommended next step (CLAUDE.md).
+
+---
+
+## 6. Blueprint review log
+
+This section records the review of the five documents for contradictions and missing requirements, done before approval.
+
+### 6.1 Contradictions found and resolved
+
+| # | Issue | Resolution |
+|---|---|---|
+| R1 | The PRD put ToS acceptance at sign-up, but the schema records it in `complete_onboarding`. | ToS moved to onboarding (PRD FR-AUTH-04, J1, Q5). |
+| R2 | A `freelancer_profiles.skills` CHECK referenced an undefined helper. | Defined `private.skills_valid(text[])` (DATABASE §6.2). |
+| R3 | ARCHITECTURE listed `cancelOrder` as an admin-DB-client user, contradicting the "payments only" rule. Its ESLint restriction would also have blocked the payment actions themselves. | `cancelOrder` uses only the Midtrans client. The admin client is reachable only through `src/server/payments/**` (ARCHITECTURE §6.3). |
+| R4 | The reconciliation scope differed: DATABASE §12 said `pending` only, ARCHITECTURE §9.5 said `initiated` and `pending`. | Aligned on `initiated`/`pending` plus stale-initiated failure. |
+| R5 | `syncPaymentStatus` rate limiting depended on `last_synced_at`, which is not written when the Status API returns 404. | Removed the server rate-limit claim. The action is idempotent and the UI debounces. `apply_payment_status` now always sets `last_synced_at`. |
+| R6 | `sort=rating` on `/services` needed ordering by an aggregate view, which PostgREST cannot reliably embed. | Added the `security_invoker` view `service_listings` (DATABASE §4.19, API §5.2). |
+| R7 | Direct writes blocked by RLS on UPDATE/DELETE affect zero rows silently, but API errors such as `JOB_NOT_EDITABLE` assumed an exception. | Added API §1.5 (pre-read plus a zero-row check). |
+| R8 | Lock ordering: `apply_payment_status` naturally locks the payment first, while `cancel_order` locks the order first (deadlock risk). | Global lock order `jobs → proposals → orders → payments`. `apply_payment_status` looks up IDs without locking, then locks in order (DATABASE §7, §8.2). |
+
+### 6.2 Missing requirements found and added
+
+| # | Gap | Resolution |
+|---|---|---|
+| M1 | A freelancer could not back out of an accepted-but-unpaid hire, which would leave the client paying for someone unavailable. | The freelancer may cancel an `awaiting_payment` order (BR-20, DATABASE `cancel_order`, API `cancelOrder`). |
+| M2 | Job status after a **paid** job order is cancelled was undefined. | The job stays `filled`, and the client reposts (PRD FR-PROP-05, DATABASE `cancel_order`). |
+| M3 | No path existed for students whose university is not listed. | Admin adds the university. Recorded as PRD Q7. |
+| M4 | Auth and legal pages were missing from the route contract. | Added `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/terms`, `/privacy` (API §5.2). ToS content is the product owner's (Q5). |
+| M5 | Midtrans order IDs could collide across environments sharing one sandbox merchant. | A random suffix in `midtrans_order_id`. Unknown IDs are acknowledged with 200 (DATABASE §4.16, ARCHITECTURE §9.3). |
+| M6 | A user could cancel while a VA was still payable, leading to money received for a cancelled order. | Best-effort Midtrans `expire` after `cancel_order`, plus the late-payment refund path (ARCHITECTURE §9.6). |
+| M7 | Academic-dishonesty listings are a known risk for student marketplaces. | BR-25, SR-21, admin block. |
+
+### 6.3 Known limitations accepted for MVP
+
+- Refunds and payouts are manual. Admin workload grows with volume (ADR-07).
+- Without a public webhook URL (local/preview), payment confirmation relies on return-sync and reconciliation. Reconciliation is daily on the Vercel Hobby plan.
+- There is no notification system. Users must open the dashboard to see changes (PRD Q3).
+- The student document purge job and self-service account deletion are post-MVP (PRD Q4, DATABASE §15). They need a decision before any real pilot under UU PDP.
+- Orphaned storage uploads (uploaded but never referenced) are not cleaned up.
+- The `is_eligible_freelancer()` per-row check in the services policy is fine at MVP scale and may need denormalisation later.
+- The dev container lacks Docker for the local Supabase stack (P2).
+
+### 6.4 Decision log
+
+| Date | Decision | Docs updated |
+|---|---|---|
+| 2026-11-13 | Initial blueprint v0.1 | All |
