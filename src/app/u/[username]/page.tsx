@@ -145,7 +145,7 @@ export default async function PublicProfilePage({
                   {services.map((service) => (
                     <Link key={service.id} href={`/services/${service.id}` as Route} className="rounded-xl border p-4 transition-shadow hover:shadow-sm">
                       <p className="font-semibold">{service.title}</p>
-                      <p className="text-primary mt-2 text-sm font-bold">{formatIdr(service.price)} · {service.delivery_days} hari</p>
+                      <p className="text-primary mt-2 text-sm font-bold">{formatIdr(service.price ?? 0)} · {service.delivery_days} hari</p>
                     </Link>
                   ))}
                 </div>
