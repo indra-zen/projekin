@@ -1,0 +1,101 @@
+// Dev container for Projekin (Next.js App Router + TypeScript + npm).
+// Reference: https://containers.dev/implementors/json_reference/
+{
+  "name": "Projekin (Node 24 LTS)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {
+      "NODE_VERSION": "24",
+      "CLAUDE_CODE_VERSION": "latest"
+    }
+  },
+
+  "remoteUser": "node",
+  "updateRemoteUserUID": true,
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  // Fedora/RHEL hosts run SELinux in enforcing mode, which blocks the container
+  // from reading the bind-mounted workspace. This disables SELinux labeling for
+  // this container only. On hosts without SELinux it has no effect.
+  "runArgs": ["--security-opt", "label=disable"],
+
+  "features": {
+    // Keeps git current and configures it for the non-root user.
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI, useful for PRs/issues and for Claude Code's GitHub workflows.
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "mounts": [
+    // Persist Claude Code login/settings across container rebuilds (per-container volume, never in git).
+    "source=projekin-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    // Persist shell history across rebuilds.
+    "source=projekin-bashhistory-${devcontainerId},target=/commandhistory,type=volume"
+  ],
+
+  "containerEnv": {
+    // Puts Claude Code's config (including .claude.json) inside the persisted volume.
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js dev server",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker",
+        "yoavbls.pretty-ts-errors",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        // Integrated terminals open inside the container.
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": { "path": "/bin/bash", "icon": "terminal-bash" }
+        },
+
+        // TypeScript: use the project's TypeScript once it is installed.
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+
+        // Formatting / linting.
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "eslint.useFlatConfig": true,
+
+        // Tailwind CSS IntelliSense inside className strings and helpers.
+        "tailwindCSS.experimental.classRegex": [
+          ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+          ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+        ],
+        "files.associations": {
+          "*.css": "tailwindcss"
+        },
+
+        "files.eol": "\n",
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.next/**": true
+        }
+      }
+    }
+  }
+}

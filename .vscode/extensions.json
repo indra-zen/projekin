@@ -1,0 +1,4 @@
+{
+  // Host-side recommendation: needed to open the project in the container.
+  "recommendations": ["ms-vscode-remote.remote-containers"]
+}
