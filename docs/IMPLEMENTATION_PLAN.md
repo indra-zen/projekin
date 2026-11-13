@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Draft for approval |
-| Version | 0.1 (2026-11-13) |
+| Version | 0.2 (2026-11-13), with product-owner decisions on Q1, Q3, Q6 and the database environment |
 | Related | [PRD.md](PRD.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md), [API_CONTRACT.md](API_CONTRACT.md) |
 
 ---
@@ -23,10 +23,11 @@
 | # | Item | Owner | Blocking |
 |---|---|---|---|
 | P1 | Approve this blueprint (or list changes) | Product owner | Phase 0 |
-| P2 | Decide on Docker in the dev container (add the `docker-in-docker` feature) **or** provide a hosted dev Supabase project ([ARCHITECTURE §4](ARCHITECTURE.md#4-environments-and-configuration)) | Product owner | Phase 1 |
+| P2 | ~~Database environment~~ **Decided:** hosted supabase.com projects ([ARCHITECTURE §4.2](ARCHITECTURE.md#42-database-workflow-hosted-supabase)). Still needed: create `projekin-dev` and share its project ref, URL and keys through `.env.local` (not chat or commits). | Product owner | Phase 1 |
+| P2a | Approve the dev container change: add `postgresql-client` and `pg_prove` so that DB tests can run against dev from the container | Product owner | Phase 1 (local DB tests). CI works without it. |
 | P3 | Supabase projects (dev, prod) and Midtrans Sandbox account keys, provided as env vars only, never committed | Product owner | Phase 1 (Supabase), Phase 6 (Midtrans) |
-| P4 | Answers to PRD open questions Q1–Q7 (defaults are used until then) | Product owner | Not blocking |
-| P5 | University seed list with student email domains (Q6) | Product owner | Phase 3 (seed placeholders until then) |
+| P4 | Answers to the remaining PRD open questions Q2, Q4, Q5, Q6a, Q7 (Q1, Q3, Q6 are decided; defaults are used until then) | Product owner | Not blocking |
+| P5 | Full Tarakan university list and official student email domains (Q6a) | Product owner | Not blocking. The document method works without domains. |
 
 ---
 
@@ -45,7 +46,9 @@ Tasks:
 4. ESLint flat config: `typescript-eslint` strict, `no-restricted-imports` for `@/lib/supabase/admin` ([ARCHITECTURE §6.3](ARCHITECTURE.md#63-supabase-clients)), ban `dangerouslySetInnerHTML` (`react/no-danger`). Prettier.
 5. Vitest + Testing Library config. Playwright config (not yet used).
 6. `src/lib/env/{server,client}.ts` with Zod validation and the `MIDTRANS_IS_PRODUCTION=false` guard. `.env.example`.
-7. Supabase CLI: `supabase init`, `supabase/config.toml` (auth: confirm email on, site URL, redirect URLs).
+7. Supabase CLI as an npm dev dependency: `npx supabase init`, `supabase/config.toml` (auth: confirm email on, site URL, redirect URLs, used by the CI local stack), `npx supabase link` to `projekin-dev`.
+7a. Bahasa Indonesia baseline: `<html lang="id">`, the Indonesian Zod error map, and the `error-messages.ts` skeleton (ARCHITECTURE §11.6).
+7b. If P2a is approved: add `postgresql-client` and `pg_prove` to `.devcontainer/Dockerfile`.
 8. GitHub Actions CI: install → lint → typecheck → unit → build. (The DB test job is added in Phase 1.)
 9. npm scripts: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:db`, `test:e2e`, `db:types`.
 
@@ -65,7 +68,7 @@ Tasks (migrations in the order of [DATABASE §14](DATABASE.md#14-migration-plan)
 5. Views (`*_rating_stats`, `service_listings`).
 6. Storage buckets with size and MIME limits, and policies per §11.
 7. `pg_cron` extension enabled. Schedules are added in Phases 6–7, together with their functions.
-8. `seed.sql`: categories and placeholder universities. A local seed script creates test users (client, student-freelancer, admin).
+8. `reference_data` migration (categories and Tarakan universities, DATABASE §13). `seed.sql` and fixtures for CI test users (client, student-freelancer, admin).
 9. Generate `src/types/database.ts`.
 10. pgTAP test helpers: `tests.as_anon()`, `tests.as_user(uid)` (set `role` and `request.jwt.claims`), `tests.create_user(email)`.
 
@@ -75,7 +78,7 @@ Tests (pgTAP):
 - Column grants: an owner cannot update `status`, `verified_until`, `blocked_at`, `onboarded_at` or money columns.
 - Storage: path-prefix policies for each bucket. `student-documents` is not readable by other users.
 
-Exit: `supabase db reset` applies cleanly. `npm run test:db` is green. CI runs DB tests (Supabase CLI in GitHub Actions).
+Exit: migrations apply cleanly from scratch in CI (`supabase db reset` on the ephemeral stack) **and** incrementally to `projekin-dev` (`npx supabase db push`). `npm run test:db` is green in CI (and locally against dev if P2a is approved). Generated types are committed.
 
 ### Phase 2: Auth, onboarding, profiles (≈ 2 days)
 
@@ -87,7 +90,7 @@ Tasks:
 5. `src/server/errors.ts` mapping and `ActionResult` types.
 6. Layouts: public header (auth-aware), dashboard shell, admin shell (`notFound` for non-admins).
 
-Tests: unit (safe `next` redirect, error mapping); pgTAP (`complete_onboarding`); integration (actions reject unauthenticated calls); E2E (J1 sign-up → confirm via the local Inbucket/Mailpit → onboarding).
+Tests: unit (safe `next` redirect, error mapping, Indonesian messages exist for every `reason`); pgTAP (`complete_onboarding`); integration (actions reject unauthenticated calls); E2E in CI (J1 sign-up → confirm through the CI stack's Mailpit inbox → onboarding). Manual check on dev with a dashboard-created, auto-confirmed user.
 
 Exit: J1 works locally. Protected routes redirect. Admin routes 404 for non-admins.
 
@@ -201,9 +204,9 @@ Exit: all CI checks green. The QA checklist passes on production (sandbox). Know
 |---|---|---|---|
 | Static | `tsc --noEmit`, ESLint | Types, banned patterns (admin client imports, `dangerouslySetInnerHTML`) | Every push |
 | Unit | Vitest | Pure logic: Zod schemas, signature, status map, Snap body builder, formatting, safe redirect, error mapping, env guard | Every push |
-| Database | pgTAP via `supabase test db` | RLS matrix, column grants, storage policies, every RPC (happy path + wrong actor + wrong state + limits), constraints, cron functions | Every push (CI starts the local Supabase stack) |
-| Integration | Vitest + local Supabase | Route handlers called as functions with `Request` objects. Actions' auth and validation behaviour. Real user JWTs from seeded users. Midtrans HTTP mocked by stubbing `fetch`. | Every push |
-| E2E | Playwright | Journeys J1–J10 against `next build && next start` + local Supabase. Payment simulated by a service-role fixture. | PRs to `main` |
+| Database | pgTAP via `supabase test db` | RLS matrix, column grants, storage policies, every RPC (happy path + wrong actor + wrong state + limits), constraints, cron functions | Every push (CI ephemeral stack). Optionally locally against dev with `pg_prove` (P2a). |
+| Integration | Vitest + CI ephemeral Supabase stack | Route handlers called as functions with `Request` objects. Actions' auth and validation behaviour. Real user JWTs from seeded users. Midtrans HTTP mocked by stubbing `fetch`. | Every push |
+| E2E | Playwright | Journeys J1–J10 against `next build && next start` + CI ephemeral Supabase stack. Payment simulated by a service-role fixture. | PRs to `main` |
 | Sandbox E2E | Playwright `@sandbox` tag + manual | Real Snap popup and sandbox payment methods | Manual before release |
 
 ### 4.2 Database test conventions
@@ -235,9 +238,9 @@ Exit: all CI checks green. The QA checklist passes on production (sandbox). Know
 
 ### 4.4 Test data
 
-- `supabase/seed.sql` holds reference data only.
-- `tests/fixtures/` holds TypeScript factories that create users through the Auth admin API and data through RPCs (local only).
-- Never run tests against hosted projects.
+- Reference data (categories, universities) is a data migration (DATABASE §13). `supabase/seed.sql` holds CI-only test data.
+- `tests/fixtures/` holds TypeScript factories that create users through the Auth admin API and data through RPCs. They run only against the **CI local stack**.
+- Against hosted projects, only rolled-back pgTAP files may run, and only on **dev**. Integration and E2E tests, which commit data, never run against hosted projects. **Nothing** runs against prod.
 
 ### 4.5 CI pipeline (GitHub Actions)
 
@@ -315,10 +318,17 @@ This section records the review of the five documents for contradictions and mis
 - The student document purge job and self-service account deletion are post-MVP (PRD Q4, DATABASE §15). They need a decision before any real pilot under UU PDP.
 - Orphaned storage uploads (uploaded but never referenced) are not cleaned up.
 - The `is_eligible_freelancer()` per-row check in the services policy is fine at MVP scale and may need denormalisation later.
-- The dev container lacks Docker for the local Supabase stack (P2).
+- The dev database is shared by local development and Vercel previews, so test and preview data mix. Free-plan projects pause when inactive.
+- Without P2a, DB tests run only in CI, so local feedback on SQL changes needs a push to a branch.
+- Transactional email is excluded (PRD Q3, decided). Users must check the dashboard.
+- Automatic student-email verification is off for every seeded university until student email domains are confirmed (Q6a).
 
 ### 6.4 Decision log
 
 | Date | Decision | Docs updated |
 |---|---|---|
 | 2026-11-13 | Initial blueprint v0.1 | All |
+| 2026-11-13 | Database environment: hosted supabase.com (dev + prod) instead of a local Docker stack. CI uses an ephemeral local stack. | ARCHITECTURE §4, §14; DATABASE §13, §14; IMPLEMENTATION_PLAN §2, §3, §4.4, §6.3 |
+| 2026-11-13 | Q1: UI in Bahasa Indonesia (NFR-11) | PRD; ARCHITECTURE §3, §11.6; API_CONTRACT §7; IMPLEMENTATION_PLAN Phase 0/2 |
+| 2026-11-13 | Q3: transactional email excluded from MVP (not "easy": needs provider, domain and outbox worker) | PRD §4.2, §10.2 |
+| 2026-11-13 | Q6: seed Tarakan universities, starting with STMIK PPKIA Tarakanita Rahmawati and Universitas Borneo Tarakan, without email domains (document method) until confirmed. Reference data moved into a data migration. Category names in Bahasa Indonesia. | PRD §10.2; DATABASE §4.3, §13, §14 |

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Draft for approval |
-| Version | 0.1 (2026-11-13) |
+| Version | 0.2 (2026-11-13), with product-owner decisions on Q1, Q3, Q6 and the database environment |
 | Engine | Supabase PostgreSQL (15+), Supabase Auth, Supabase Storage, `pg_cron` |
 | Related | [PRD.md](PRD.md) (business rules `BR-xx`), [API_CONTRACT.md](API_CONTRACT.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 
@@ -118,7 +118,7 @@ Written only by SQL/service role. Read only through `private.is_admin()`.
 |---|---|---|
 | id | uuid | PK |
 | name | text | NN, U |
-| short_name | text | e.g. "UI", "ITB" |
+| short_name | text | e.g. "UBT", "STMIK PPKIA" |
 | email_domains | text[] | NN, default `'{}'`. Lower-case exact domains (e.g. `student.example.ac.id`). **Exact match only, no suffix matching.** |
 | is_active | boolean | NN, default `true` |
 | created_at, updated_at | timestamptz | NN |
@@ -787,12 +787,33 @@ DB-only time transitions run in `pg_cron` so they don't depend on Vercel plan li
 
 ## 13. Seed data
 
-`supabase/seed.sql` (local and dev only):
-- `categories`: graphic-design, web-development, mobile-development, writing-translation, video-animation, data-analytics, marketing, other.
-- `universities`: a few example rows with **placeholder domains** (e.g. `student.example.ac.id`). Real names and domains must be confirmed by the product owner before pilot (PRD Q6).
-- Local-only test users (client-only, verified student, admin) created through `auth.admin` in a seed script, not in migrations.
+Reference data and test data are separated, because development uses a hosted project with no local `db reset` (ARCHITECTURE §4.2).
 
-Production gets categories and universities through a reviewed data migration. No test users.
+**Reference data:** a data migration (`reference_data`), idempotent (`INSERT … ON CONFLICT (slug|name) DO NOTHING`), applied to dev, prod and CI alike.
+
+- `categories` (display names in Bahasa Indonesia, slugs in URL-safe Indonesian):
+
+  | slug | name |
+  |---|---|
+  | `desain-grafis` | Desain Grafis |
+  | `pengembangan-web` | Pengembangan Web |
+  | `aplikasi-mobile` | Aplikasi Mobile |
+  | `penulisan-penerjemahan` | Penulisan & Penerjemahan |
+  | `video-animasi` | Video & Animasi |
+  | `data-analitik` | Data & Analitik |
+  | `pemasaran-digital` | Pemasaran Digital |
+  | `lainnya` | Lainnya |
+
+- `universities`: Tarakan institutions first (PRD Q6). All rows start with `email_domains = '{}'`, so they work with the **document** method only. Automatic email-domain verification turns on per university when its official **student** email domain is confirmed and added in a later data migration.
+
+  | name | short_name | email_domains |
+  |---|---|---|
+  | STMIK PPKIA Tarakanita Rahmawati | STMIK PPKIA | `{}` (to be confirmed) |
+  | Universitas Borneo Tarakan | UBT | `{}` (to be confirmed) |
+
+  More Tarakan universities are added once the product owner confirms the list (PRD Q6a).
+
+**Test data:** `supabase/seed.sql` and `tests/fixtures/` (CI local stack only). Test users (client-only, verified student, admin) are created through the Auth admin API. Test data is never loaded into the hosted dev or prod projects by scripts. Developers create their own dev accounts manually.
 
 ---
 
@@ -812,11 +833,13 @@ Migrations live in `supabase/migrations/` (Supabase CLI, timestamped). They run 
 10. `views`: rating stats and `service_listings`.
 11. `storage`: buckets and policies (§11).
 12. `cron`: `pg_cron` schedules (§12).
+13. `reference_data`: categories and universities (§13).
 
 Rules:
 - Never edit an applied migration. Add a new one.
 - Destructive changes (drop or rename column/table, type narrowing) need explicit approval (CLAUDE.md rule 16).
-- After each schema change, regenerate types: `supabase gen types typescript --local > src/types/database.ts`.
+- Apply to the hosted dev project with `npx supabase db push`. Prod pushes need explicit approval (ARCHITECTURE §4.2).
+- After each schema change, regenerate types: `npx supabase gen types typescript --project-id <dev-ref> > src/types/database.ts`.
 
 ---
 

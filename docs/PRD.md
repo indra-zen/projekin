@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Draft for approval |
-| Version | 0.1 (2026-11-13) |
+| Version | 0.2 (2026-11-13), with product-owner decisions on Q1, Q3, Q6 and the database environment |
 | Companion docs | [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md), [API_CONTRACT.md](API_CONTRACT.md), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) |
 
 **Source-of-truth rule.** This document owns *scope*, *business rules* and *numbers* (fees, limits, time windows). The other documents reference the rule IDs (`BR-xx`) instead of restating values. If a number changes, change it here first, then in the SQL constants listed in [DATABASE.md §6.4](DATABASE.md#64-business-constants).
@@ -106,7 +106,7 @@ Personas:
 | Services | Package tiers (basic/standard/premium), add-ons, custom offers | One price tier per service |
 | Jobs | Multiple hires per job, inviting freelancers, job attachments, pre-hire Q&A | One hire per job. The job description is the brief. |
 | Communication | General direct messages, real-time chat, typing indicators | Order-scoped message thread (refresh-based) |
-| Notifications | In-app notification centre, transactional email (other than Supabase Auth emails), push | Dashboard status badges. Email notifications are an [open question](#10-assumptions-and-open-questions). |
+| Notifications | In-app notification centre, transactional email (other than Supabase Auth emails), push | Dashboard status badges. Transactional email is deferred to post-MVP ([Q3, decided](#102-decided)). |
 | Identity | Social login, phone OTP, 2FA, automated ID OCR | Email/password and manual document review |
 | Discovery | Recommendations, saved/favourites, advanced search engine | Postgres full-text search and filters |
 | Trust & safety | User reporting/flagging workflow, automated content moderation | Admin can block services, close jobs and suspend freelancers |
@@ -349,6 +349,7 @@ Each journey lists the happy path and its key alternatives. Detailed flows and s
 | NFR-08 Browser support | Latest two versions of Chrome, Firefox, Safari and Edge, including mobile Safari and Chrome. |
 | NFR-09 Code quality | TypeScript `strict`. Lint, type check, unit tests, DB tests and build pass in CI. |
 | NFR-10 Observability | Structured server logs for payment and webhook paths, with no secrets or PII in logs. |
+| NFR-11 Language | All user-facing text is in **Bahasa Indonesia**: UI copy, validation and error messages, empty states, and Supabase Auth email templates. Pages set `<html lang="id">`. Code, identifiers, database enums, URLs, logs and documentation stay in English. |
 
 ---
 
@@ -370,18 +371,24 @@ Each journey lists the happy path and its key alternatives. Detailed flows and s
 
 - A1. Market is Indonesia, currency IDR, timezone `Asia/Jakarta`.
 - A2. Midtrans Sandbox is enough for the MVP. Going to production requires merchant onboarding and is out of scope.
-- A3. A university email domain list is maintained manually by admins (seeded through SQL).
+- A3. Universities and their student email domains are maintained by admins through reviewed data migrations.
 - A4. Platform holds funds conceptually. Legal and licensing review of the escrow-style flow is required before production.
 - A5. Supabase built-in email is fine for development. A custom SMTP provider is configured before any pilot (Supabase's default sender is heavily rate-limited).
 
-### 10.2 Open questions (need product owner decision)
+### 10.2 Decided
+
+| ID | Question | Decision (2026-11-13) |
+|---|---|---|
+| Q1 | UI language | **Bahasa Indonesia** (NFR-11). One language only, so no i18n framework. Copy lives in components. Route paths stay English (`/services`, `/jobs`), while visible labels are Indonesian ("Jasa", "Pekerjaan"). |
+| Q3 | Transactional email (order paid, delivered, etc.) in MVP? | "Include it if easy." It is **not easy** here, so it is **excluded from the MVP**. It would need an email provider account, a verified sending domain, and an outbox worker, because many transitions (payment webhook, `pg_cron` expiry and auto-complete) happen outside a request where email could be sent. Post-MVP design: treat `order_events` as the outbox and send from a cron worker. Supabase Auth emails still need custom SMTP before pilot (A5). |
+| Q6 | Which universities to seed? | Start with universities in **Tarakan**, including **STMIK PPKIA Tarakanita Rahmawati**. Seeded with empty `email_domains`, so verification uses the **document method** until the official **student** email domains are confirmed (DATABASE §13). |
+
+### 10.3 Open questions (need product owner decision)
 
 | ID | Question | Default used in this blueprint |
 |---|---|---|
-| Q1 | UI language: Bahasa Indonesia, English, or both? | Single language. Copy is kept in components so it can be extracted later. No i18n framework in the MVP. |
 | Q2 | Is the 10% platform fee (charged to the freelancer) correct, or should the client pay a service fee on top? | 10% from freelancer (BR-09) |
-| Q3 | Transactional email (order paid, delivered, etc.) in MVP? | Excluded. Dashboard badges only. |
 | Q4 | Retention period for student documents after decision (Indonesian PDP Law, UU 27/2022)? | Kept until the verification expires. Purge is a post-MVP job (see IMPLEMENTATION_PLAN risks). |
-| Q5 | Minimum age / ToS acceptance flow? | ToS checkbox at onboarding (stored as `profiles.terms_accepted_at`). No age gate. ToS and Privacy page **content** must be supplied by the product owner. |
+| Q5 | Minimum age / ToS acceptance flow? | ToS checkbox at onboarding (stored as `profiles.terms_accepted_at`). No age gate. ToS and Privacy page **content** (in Bahasa Indonesia) must be supplied by the product owner. |
+| Q6a | Complete list of Tarakan universities to seed, and each one's official student email domain (if any) | Seed only the universities named in DATABASE §13 until the list is confirmed |
 | Q7 | How do students whose university is not listed get verified? | They contact support and an admin adds the university (SQL in the MVP). There is no self-service "request a university" flow. |
-| Q6 | Which universities and domains to seed? Student-only subdomains are preferred over staff/alumni domains. | Small seed list, confirmed by the product owner before pilot |

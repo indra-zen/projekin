@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Draft for approval |
-| Version | 0.1 (2026-11-13) |
+| Version | 0.2 (2026-11-13), with product-owner decisions on Q1, Q3, Q6 and the database environment |
 | Related | [PRD.md](PRD.md), [DATABASE.md](DATABASE.md), [API_CONTRACT.md](API_CONTRACT.md), [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) |
 
 ---
@@ -64,14 +64,14 @@ flowchart LR
 | Runtime | Node.js 24 LTS | Matches the dev container |
 | Framework | Next.js App Router, latest stable at scaffold time (16.x+) | Exact version pinned in `package.json`. Session refresh lives in `proxy.ts` (called `middleware.ts` before Next 16). |
 | Language | TypeScript, `strict: true`, `noUncheckedIndexedAccess: true` | No `any` without a justification comment |
-| UI | Tailwind CSS v4, shadcn/ui (Radix primitives), lucide-react icons, sonner toasts | |
+| UI | Tailwind CSS v4, shadcn/ui (Radix primitives), lucide-react icons, sonner toasts | Copy in Bahasa Indonesia (§11.6) |
 | Forms | react-hook-form + Zod resolver | The same Zod schemas validate on the server |
 | Validation | Zod | `src/lib/validation/*` |
 | Data | `@supabase/supabase-js`, `@supabase/ssr` | Generated types `src/types/database.ts` |
 | Payments | Midtrans Snap (Sandbox) through a thin typed `fetch` wrapper | No Midtrans Node SDK (untyped CommonJS, unnecessary for 3 endpoints) |
 | Hosting | Vercel (app + Vercel Cron), Supabase Cloud | |
 | Tests | Vitest, Testing Library, Playwright, pgTAP (`supabase test db`) | See [IMPLEMENTATION_PLAN §4](IMPLEMENTATION_PLAN.md#4-testing-strategy) |
-| Tooling | ESLint (flat config, `next/core-web-vitals` + `typescript-eslint` strict), Prettier, Supabase CLI | |
+| Tooling | ESLint (flat config, `next/core-web-vitals` + `typescript-eslint` strict), Prettier, Supabase CLI (npm dev dependency, run with `npx supabase`) | |
 
 ---
 
@@ -79,11 +79,12 @@ flowchart LR
 
 | Environment | App | Database | Midtrans |
 |---|---|---|---|
-| Local | `npm run dev` (port 3000) | Supabase CLI local stack (`supabase start`) | Sandbox. Webhooks need a tunnel; otherwise return-sync covers it (§9.4). |
-| Preview | Vercel preview deployments | Hosted **dev** Supabase project | Sandbox (shared merchant; IDs carry random suffix) |
+| Local (dev container) | `npm run dev` (port 3000) | Hosted **dev** project on supabase.com | Sandbox. Webhooks need a tunnel; otherwise return-sync covers it (§9.4). |
+| CI (GitHub Actions) | `next build && next start` | **Ephemeral** Supabase CLI local stack (`supabase start`; Docker is available on GitHub runners) | Mocked |
+| Preview | Vercel preview deployments | Hosted **dev** project | Sandbox (shared merchant; IDs carry random suffix) |
 | Production (demo) | Vercel production | Hosted **prod** Supabase project | Sandbox (MVP). `MIDTRANS_IS_PRODUCTION` must stay `false`. |
 
-**Dev container gap:** the current container has no Docker daemon, and `supabase start` needs one. Options: (a) add the `docker-in-docker` dev container feature (recommended, needs approval because it changes `.devcontainer/`), or (b) point local development at the hosted dev project.
+**Decision (2026-11-13):** development uses a hosted supabase.com project instead of a local Docker stack. See §4.2 for the workflow.
 
 ### 4.1 Environment variables
 
@@ -100,7 +101,25 @@ flowchart LR
 
 - Validated at startup with Zod in `src/lib/env/server.ts` (imports `server-only`) and `src/lib/env/client.ts`.
 - `.env.example` is committed with empty values. `.env.local` is git-ignored.
+- CLI-only credentials (`SUPABASE_ACCESS_TOKEN` from `npx supabase login`, and the database password used by `supabase link`/`db push`) are never app env vars and are never committed.
 - Midtrans base URLs come from `MIDTRANS_IS_PRODUCTION`: Snap `https://app.sandbox.midtrans.com/snap/v1/transactions`, Core `https://api.sandbox.midtrans.com/v2`, Snap.js `https://app.sandbox.midtrans.com/snap/snap.js`.
+
+### 4.2 Database workflow (hosted Supabase)
+
+| Task | How | Docker needed |
+|---|---|---|
+| Projects | Two projects on supabase.com: `projekin-dev` (local development + Vercel preview) and `projekin-prod`. The Free plan allows 2 active projects and **pauses a project after a period of inactivity**; resume it from the dashboard. | — |
+| Link | `npx supabase link --project-ref <dev-ref>` | No |
+| Write migrations | Hand-written SQL in `supabase/migrations/` (`npx supabase migration new <name>`). `supabase db diff` is **not** used because it needs Docker. | No |
+| Apply to dev | `npx supabase db push` (applies pending migrations only). Agents may push **additive** migrations to dev. | No |
+| Apply to prod | `npx supabase db push` against the prod link, **only with explicit approval**, at release. | No |
+| Reset | `supabase db reset --linked` is destructive and **never** run without explicit approval (CLAUDE.md rule 16). | — |
+| Types | `npx supabase gen types typescript --project-id <dev-ref> > src/types/database.ts` | No |
+| DB tests (local feedback) | `pg_prove` against the **dev** project. Every test file runs inside `BEGIN … ROLLBACK`, so it leaves no data behind. Needs `postgresql-client` and `pg_prove` in the dev container (proposed in Phase 0; needs approval because it changes `.devcontainer/`) and the `pgtap` extension enabled on dev. | No |
+| DB tests (authoritative) | CI: `supabase start` → `supabase db reset` → `supabase test db` on a fresh, empty stack | Yes (GitHub runner) |
+| Auth emails in dev | The hosted project's built-in sender is heavily rate-limited. Create dev users in the dashboard with "Auto Confirm User", or configure custom SMTP early. Site URL `http://localhost:3000`. Add the Vercel preview URL pattern to the redirect allow-list. | — |
+
+Because the dev database is shared with preview deployments and is never empty, tests must create their own fixtures and must not assume empty tables (for example, scope counts to fixture users).
 
 ---
 
@@ -112,7 +131,7 @@ flowchart LR
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/               # Timestamped SQL (DATABASE §14)
-│   ├── seed.sql                  # Local/dev seed
+│   ├── seed.sql                  # CI-only test data (reference data is a migration)
 │   └── tests/                    # pgTAP: rls_*.test.sql, rpc_*.test.sql
 ├── src/
 │   ├── app/
@@ -142,7 +161,7 @@ flowchart LR
 │   └── proxy.ts
 ├── tests/
 │   ├── unit/                     # Vitest
-│   ├── integration/              # Vitest against local Supabase
+│   ├── integration/              # Vitest against the CI ephemeral Supabase stack
 │   └── e2e/                      # Playwright
 ├── .env.example
 └── vercel.json                   # Cron definitions
@@ -392,6 +411,15 @@ Rendered as plain text (`whitespace-pre-wrap`), never through `dangerouslySetInn
 
 ---
 
+### 11.6 Language (Bahasa Indonesia)
+
+- `src/app/layout.tsx` sets `<html lang="id">`. Copy is written in Indonesian directly in components. There is no i18n framework (PRD Q1).
+- Validation messages come from a shared Indonesian Zod error map (`src/lib/validation/messages.ts`) applied on both client and server.
+- Action error messages come from `src/server/error-messages.ts`, keyed by `reason` ([API_CONTRACT §7](API_CONTRACT.md#7-postgres--actionresult-mapping)).
+- Supabase Auth email templates (confirm signup, reset password, change email) are translated in each project's dashboard and point at `/auth/confirm`.
+- The Snap popup is opened with its language option set to Indonesian.
+- Numbers, currency and dates use the `id-ID` locale (§11.3).
+
 ## 12. Security
 
 ### 12.1 Security headers (`next.config.ts`)
@@ -413,7 +441,7 @@ L = likelihood, I = impact (H/M/L).
 | SR-06 | **Client-side payment callback trusted** | M | H | Snap callbacks only trigger server sync | Code review; E2E test that `onSuccess` without a settlement leaves the order unpaid |
 | SR-07 | **IDOR** on orders, files, proposals | M | H | RLS on every read; `SECURITY DEFINER` RPCs check ownership; private buckets with participant policies; signed URLs created with the user client | pgTAP and integration tests |
 | SR-08 | **Race conditions** (double accept, pay vs. cancel, double delivery) | M | M | Row locks in global lock order; partial unique indexes (one live order per job, one live attempt per order) | Concurrency tests in pgTAP (two sessions) where feasible, plus constraint tests |
-| SR-09 | **Student verification fraud** (fake KTM, alumni emails) | M | M | Manual review; student-only domains preferred; expiry (BR-03); admin suspension; documents immutable | Admin procedure; PRD Q6 |
+| SR-09 | **Student verification fraud** (fake KTM, alumni emails) | M | M | Manual review; student-only domains preferred; expiry (BR-03); admin suspension; documents immutable | Admin procedure; PRD Q6/Q6a |
 | SR-10 | **PII exposure** (KTM images, student numbers, emails) | L | H | Private bucket; owner+admin policies; 60 s signed URLs; email never in `public` tables; no PII in logs | pgTAP storage tests; log review |
 | SR-11 | **Malicious uploads** (oversized, executable, stored XSS through SVG/HTML) | M | M | Bucket MIME allow-lists (no SVG/HTML), size limits, random object names; files served from the Supabase domain, not the app origin; downloads served with `download` disposition | Upload tests |
 | SR-12 | **XSS through UGC** | M | H | Plain-text rendering only; React escaping; no `dangerouslySetInnerHTML` (ESLint rule) | Lint; review |
@@ -444,7 +472,7 @@ L = likelihood, I = impact (H/M/L).
 
 ## 14. Deployment
 
-1. **Supabase (per environment):** create the project → `supabase link` → `supabase db push` (migrations) → seed categories and universities → enable `pg_cron` → configure Auth (site URL, redirect URLs, email templates pointing at `/auth/confirm`, SMTP) → create the first admin with SQL (`insert into admin_users`).
+1. **Supabase (per environment):** create the project → `supabase link` → `supabase db push` (migrations, including the reference-data migration for categories and universities) → enable `pg_cron` → configure Auth (site URL, redirect URLs, email templates pointing at `/auth/confirm`, SMTP) → create the first admin with SQL (`insert into admin_users`).
 2. **Vercel:** import the repo → set env vars per environment (§4.1) → set `CRON_SECRET` → deploy. `vercel.json` registers the cron.
 3. **Midtrans Sandbox dashboard:** copy the Server and Client keys → set the Payment Notification URL to production → (optional) set the Finish redirect URL (we also send `callbacks.finish` per transaction).
 4. **Release gate:** CI green (lint, typecheck, unit, pgTAP, build) → manual sandbox smoke test ([IMPLEMENTATION_PLAN §4.6](IMPLEMENTATION_PLAN.md#46-manual-sandbox-qa-checklist)).

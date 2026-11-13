@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Draft for approval |
-| Version | 0.1 (2026-11-13) |
+| Version | 0.2 (2026-11-13), with product-owner decisions on Q1, Q3, Q6 and the database environment |
 | Related | [DATABASE.md](DATABASE.md) (RPC names, error SQLSTATEs), [ARCHITECTURE.md](ARCHITECTURE.md), [PRD.md](PRD.md) |
 
 Projekin has **no public REST API**. Its contract surface is:
@@ -378,4 +378,4 @@ The response fields used are `transaction_status`, `fraud_status`, `status_code`
 | `PGRST116` (no rows for `.single()`) | `NOT_FOUND` | — |
 | anything else | `INTERNAL_ERROR` | — (logged with `correlationId`) |
 
-User-facing `message` strings are looked up from `reason` in `src/server/error-messages.ts`. Database messages are never shown raw.
+User-facing `message` strings are in **Bahasa Indonesia** (PRD NFR-11) and are looked up from `reason` in `src/server/error-messages.ts` (for example, `MAX_PAYMENT_ATTEMPTS` → "Batas percobaan pembayaran untuk pesanan ini sudah tercapai."). `fieldErrors` use the shared Indonesian Zod error map. Database messages and `reason` codes are never shown raw.
