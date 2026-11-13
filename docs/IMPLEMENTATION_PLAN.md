@@ -13,8 +13,26 @@
 | Milestone | Status | Notes |
 |---|---|---|
 | Foundation (Phase 0 subset) | Done (Copilot, `46b1093`) | Next.js 16, strict TS, Tailwind, shadcn/ui config, layout, placeholder pages |
-| Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow |
-| Still open from Phases 0–3 | Not started | Portfolio (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, generated DB types (needs the linked dev project), translating the pre-existing landing, `/services` and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
+| Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow. Migrations applied to the hosted dev project; `src/types/database.ts` generated from it (matches the migrations: 5 tables, 4 RPCs, 4 enums, no private helpers exposed). **Manually verified on hosted dev by the product owner (2026-11-13):** register, login, onboarding, file upload, student verification. |
+| Still open from Phases 0–3 | Not started | Portfolio (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, translating the pre-existing landing, `/services` and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
+
+### 0.1 Known issues (identity milestone)
+
+- **CI has not run yet.** `.github/workflows/ci.yml` (including the job that applies migrations to a real Supabase stack) runs only once the branch is pushed. Watch the first run.
+- **Database tests use PGlite plus a Supabase shim.** The hosted push and the generated types confirm the SQL on real Supabase, but RLS behaviour is asserted only in PGlite. Playwright E2E against a real stack is still missing.
+- **"Publish service" / "submit proposal" are gated in the UI and by `guardVerifiedFreelancer()`**, but their tables do not exist yet. Their RLS/RPCs must call `private.is_eligible_freelancer(auth.uid())` (BR-01) when built.
+- **Email links opened on another device** need the token-hash email templates (README step 4). The default PKCE link only works in the browser that registered.
+- **`npm audit`:** 7 moderate advisories in the dev-only ESLint/typescript-eslint chain (`minimatch`). They already existed in the foundation lockfile. Production dependencies: 0.
+- **Changing the password from settings** (`/reset-password` while signed in) does not ask for the current password. Consider enabling Supabase "Secure password change".
+
+### 0.2 Next task handoff (for GitHub Copilot)
+
+**Task: finish Phase 3: portfolio and admin freelancer suspension.** Do not start Phase 4.
+
+1. **Migration** `supabase/migrations/<timestamp>_portfolio.sql`: the `portfolio_items` table exactly as in DATABASE §4.6, with RLS and grants as in DATABASE §9–§10 (public read; owner insert/update/delete with `freelancer_id = auth.uid()`). Add the `portfolio` public bucket and own-folder policies (DATABASE §11) and RPC `set_freelancer_status` (DATABASE §7.2, admin only). Follow the existing identity migrations for patterns: `revoke all` before grants, `(select auth.uid())`, `SECURITY DEFINER SET search_path = ''`, `PJxxx` error codes, Indonesian messages added to `src/server/error-messages.ts` (a unit test fails otherwise).
+2. **Tests first** in `tests/db/` using `tests/db/harness.ts`: anon/stranger/owner/admin for every operation, the 5-image limit, non-freelancers cannot insert, non-admins cannot call `set_freelancer_status`, and suspension hides eligibility.
+3. **Actions** in `src/server/actions/` (`useActionState` signature, Zod schemas in `src/lib/validation/`, `isOwnObjectPath` for image paths, `guardOnboarded`/`guardAdmin`), plus a page at `/dashboard/portfolio`, a portfolio section on `/u/[username]`, and a suspend/reactivate control on the admin verification detail page. UI copy in Bahasa Indonesia.
+4. `npx supabase db push` to dev, regenerate `src/types/database.ts`, then run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and update docs §0.
 
 ---
 

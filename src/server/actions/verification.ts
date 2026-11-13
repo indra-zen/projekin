@@ -51,8 +51,13 @@ export async function submitVerificationAction(
   const { data, error } = await supabase.rpc("submit_student_verification", {
     p_university_id: input.universityId,
     p_method: input.method,
-    p_student_number: input.method === "document" ? input.studentNumber : null,
-    p_document_path: input.method === "document" ? input.documentPath : null,
+    // Omitted parameters fall back to the SQL defaults (NULL).
+    ...(input.method === "document"
+      ? {
+          p_student_number: input.studentNumber,
+          p_document_path: input.documentPath,
+        }
+      : {}),
   });
   if (error) return fail(mapPostgresError(error), raw);
 
@@ -82,9 +87,9 @@ export async function reviewVerificationAction(
   const { error } = await supabase.rpc("review_student_verification", {
     p_verification_id: input.verificationId,
     p_decision: input.decision,
-    p_valid_until:
-      input.decision === "approve" ? endOfDayJakarta(input.validUntil) : null,
-    p_reason: input.decision === "reject" ? input.reason : null,
+    ...(input.decision === "approve"
+      ? { p_valid_until: endOfDayJakarta(input.validUntil) }
+      : { p_reason: input.reason }),
   });
   if (error) return fail(mapPostgresError(error), raw);
 

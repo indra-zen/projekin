@@ -199,7 +199,52 @@ describe("reviewVerificationAction", () => {
       p_verification_id: RID,
       p_decision: "approve",
       p_valid_until: "2027-11-13T23:59:59+07:00",
-      p_reason: null,
+    });
+  });
+});
+
+describe("RPC arguments", () => {
+  it("sends only university and method for email-domain verification", async () => {
+    const fake = setup({
+      userId: UID,
+      profile: profileRow(UID),
+      rpc: () => ({ data: { status: "approved" }, error: null }),
+    });
+    const { submitVerificationAction } = await actions();
+    await submitVerificationAction(
+      null,
+      formData({
+        method: "email_domain",
+        universityId: UNI,
+        studentNumber: "x",
+      }),
+    );
+    expect(fake.rpc.mock.calls[0]?.[1]).toStrictEqual({
+      p_university_id: UNI,
+      p_method: "email_domain",
+    });
+  });
+
+  it("sends only the reason when an admin rejects", async () => {
+    const fake = setup({
+      userId: UID,
+      profile: profileRow(UID),
+      isAdmin: true,
+      rpc: () => ({ data: { status: "rejected" }, error: null }),
+    });
+    const { reviewVerificationAction } = await actions();
+    await reviewVerificationAction(
+      null,
+      formData({
+        decision: "reject",
+        verificationId: RID,
+        reason: "Foto buram",
+      }),
+    );
+    expect(fake.rpc.mock.calls[0]?.[1]).toStrictEqual({
+      p_verification_id: RID,
+      p_decision: "reject",
+      p_reason: "Foto buram",
     });
   });
 });

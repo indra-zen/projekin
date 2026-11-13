@@ -30,7 +30,7 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
    npx supabase db push
    ```
 
-   Then replace the hand-written types with generated ones:
+   After every schema change, regenerate the types (`src/types/database.ts` is generated; never edit it by hand, and it is excluded from Prettier):
 
    ```bash
    npx supabase gen types typescript --project-id <your-dev-project-ref> > src/types/database.ts
