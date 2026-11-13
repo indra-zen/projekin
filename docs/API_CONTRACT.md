@@ -207,7 +207,11 @@ Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, 
 | `updatePortfolioItem` | owner | `{ id } & partial(create input)` | `{ item }` | `update portfolio_items` | same |
 | `deletePortfolioItem` | owner | `{ id }` | `{ deleted: true }` | `delete portfolio_items` (storage objects removed best effort) | same |
 
-### 4.5 Services (`actions/services.ts`)
+### 4.5 Services (`actions/services.ts`) — Implemented
+
+The current exports use the repository's Server Action naming convention:
+`createServiceAction`, `updateServiceAction`, `setServiceStatusAction`, and
+`deleteServiceAction`.
 
 Shared input `serviceFields = { categoryId: uuid, title: text(10,100), description: text(50,5000), price: idr, deliveryDays, revisionsIncluded: revisions, requirementsPrompt: optionalText(1000), coverImagePath: storagePath.nullable() }`.
 

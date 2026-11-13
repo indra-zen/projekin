@@ -29,6 +29,7 @@ const items: { href: Route; label: string; icon: typeof LayoutDashboard }[] = [
     label: "Profil freelancer",
     icon: BriefcaseBusiness,
   },
+  { href: "/dashboard/services" as Route, label: "Layanan saya", icon: BriefcaseBusiness },
 ];
 
 export function DashboardNav({ isAdmin }: { isAdmin: boolean }) {

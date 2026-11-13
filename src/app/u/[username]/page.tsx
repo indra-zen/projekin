@@ -1,12 +1,14 @@
 import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
+import type { Route } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedStudentBadge } from "@/components/verification/verification-badge";
 import { isVerifiedStudent } from "@/lib/capabilities";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatIdr } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { USERNAME_PATTERN } from "@/lib/validation/common";
 
@@ -29,7 +31,19 @@ const loadProfile = cache(async (username: string) => {
     )
     .eq("user_id", profile.id)
     .maybeSingle();
-  return { profile, freelancer };
+  const [{ data: services }, { data: portfolio }] = await Promise.all([
+    supabase
+      .from("service_listings")
+      .select("id, title, price, delivery_days")
+      .eq("freelancer_id", profile.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("portfolio_items")
+      .select("id, title, description, external_url")
+      .eq("freelancer_id", profile.id)
+      .order("sort_order"),
+  ]);
+  return { profile, freelancer, services: services ?? [], portfolio: portfolio ?? [] };
 });
 
 export async function generateMetadata({
@@ -50,7 +64,7 @@ export default async function PublicProfilePage({
   const { username } = await params;
   const data = await loadProfile(username);
   if (!data) notFound();
-  const { profile, freelancer } = data;
+  const { profile, freelancer, services, portfolio } = data;
   const verified = isVerifiedStudent(freelancer);
 
   return (
@@ -122,6 +136,35 @@ export default async function PublicProfilePage({
                   </li>
                 ))}
               </ul>
+            ) : null}
+
+            {verified && services.length > 0 ? (
+              <section className="mt-8 space-y-3">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Layanan</h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {services.map((service) => (
+                    <Link key={service.id} href={`/services/${service.id}` as Route} className="rounded-xl border p-4 transition-shadow hover:shadow-sm">
+                      <p className="font-semibold">{service.title}</p>
+                      <p className="text-primary mt-2 text-sm font-bold">{formatIdr(service.price)} · {service.delivery_days} hari</p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {verified && portfolio.length > 0 ? (
+              <section className="mt-8 space-y-3">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Portofolio</h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {portfolio.map((item) => (
+                    <div key={item.id} className="bg-muted rounded-xl p-4">
+                      <p className="font-semibold">{item.title}</p>
+                      {item.description ? <p className="text-muted-foreground mt-1 text-sm">{item.description}</p> : null}
+                      {item.external_url ? <a href={item.external_url} target="_blank" rel="noreferrer" className="text-primary mt-2 inline-block text-sm font-semibold">Lihat karya</a> : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
             ) : null}
           </section>
         ) : null}

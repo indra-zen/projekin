@@ -2,6 +2,7 @@
 
 export const AVATAR_BUCKET = "avatars";
 export const STUDENT_DOCUMENT_BUCKET = "student-documents";
+export const SERVICE_MEDIA_BUCKET = "service-media";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 

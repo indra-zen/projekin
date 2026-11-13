@@ -152,6 +152,24 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: { id: string; slug: string; name: string; sort_order: number; is_active: boolean }
+        Insert: { id?: string; slug: string; name: string; sort_order?: number; is_active?: boolean }
+        Update: { id?: string; slug?: string; name?: string; sort_order?: number; is_active?: boolean }
+        Relationships: []
+      }
+      portfolio_items: {
+        Row: { id: string; freelancer_id: string; title: string; description: string | null; external_url: string | null; image_paths: string[]; sort_order: number; created_at: string; updated_at: string }
+        Insert: { id?: string; freelancer_id: string; title: string; description?: string | null; external_url?: string | null; image_paths?: string[]; sort_order?: number; created_at?: string; updated_at?: string }
+        Update: { id?: string; freelancer_id?: string; title?: string; description?: string | null; external_url?: string | null; image_paths?: string[]; sort_order?: number; updated_at?: string }
+        Relationships: []
+      }
+      services: {
+        Row: { id: string; freelancer_id: string; category_id: string; title: string; description: string; price: number; delivery_days: number; revisions_included: number; requirements_prompt: string | null; cover_image_path: string | null; status: Database["public"]["Enums"]["service_status"]; published_at: string | null; blocked_at: string | null; blocked_reason: string | null; search: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; freelancer_id: string; category_id: string; title: string; description: string; price: number; delivery_days: number; revisions_included?: number; requirements_prompt?: string | null; cover_image_path?: string | null; status?: Database["public"]["Enums"]["service_status"]; published_at?: string | null; blocked_at?: string | null; blocked_reason?: string | null; created_at?: string; updated_at?: string }
+        Update: { category_id?: string; title?: string; description?: string; price?: number; delivery_days?: number; revisions_included?: number; requirements_prompt?: string | null; cover_image_path?: string | null; status?: Database["public"]["Enums"]["service_status"]; published_at?: string | null; blocked_at?: string | null; blocked_reason?: string | null; updated_at?: string }
+        Relationships: []
+      }
       student_verifications: {
         Row: {
           created_at: string
@@ -254,7 +272,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      service_listings: {
+        Row: {
+          id: string; freelancer_id: string; category_id: string; title: string; description: string;
+          price: number; delivery_days: number; revisions_included: number; requirements_prompt: string | null;
+          cover_image_path: string | null; published_at: string | null; created_at: string; updated_at: string;
+          category_slug: string; category_name: string; freelancer_username: string; freelancer_name: string | null;
+          freelancer_avatar_path: string | null; freelancer_headline: string | null; freelancer_skills: string[];
+          university_name: string; university_short_name: string | null;
+        }
+        Relationships: []
+      }
     }
     Functions: {
       complete_onboarding: {
@@ -353,6 +381,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_service_status: {
+        Args: { p_service_id: string; p_status: Database["public"]["Enums"]["service_status"] }
+        Returns: Database["public"]["Tables"]["services"]["Row"]
+        SetofOptions: { from: "*"; to: "services"; isOneToOne: true; isSetofReturn: false }
+      }
     }
     Enums: {
       freelancer_status: "active" | "suspended"
@@ -363,6 +396,7 @@ export type Database = {
         | "rejected"
       verification_method: "email_domain" | "document"
       verification_status: "pending" | "approved" | "rejected"
+      service_status: "draft" | "published" | "paused" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never

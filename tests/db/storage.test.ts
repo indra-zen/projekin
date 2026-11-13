@@ -33,6 +33,7 @@ describe("storage buckets", () => {
     }>("select id, public, file_size_limit from storage.buckets order by id");
     expect(r.rows).toEqual([
       { id: "avatars", public: true, file_size_limit: 5242880 },
+      { id: "service-media", public: true, file_size_limit: 5242880 },
       { id: "student-documents", public: false, file_size_limit: 5242880 },
     ]);
   });

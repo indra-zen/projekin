@@ -24,6 +24,14 @@ export function formatDateTime(value: string | Date): string {
   return dateTimeFormatter.format(new Date(value));
 }
 
+export function formatIdr(value: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 /** YYYY-MM-DD for <input type="date">, `months` from `from`, in Asia/Jakarta. */
 export function isoDateInMonths(
   months: number,

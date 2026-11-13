@@ -45,6 +45,12 @@ export const reasonMessages: Record<string, string> = {
     "Profil freelancer tersedia setelah verifikasi mahasiswa disetujui.",
   FREELANCER_NOT_ELIGIBLE:
     "Hanya mahasiswa terverifikasi yang dapat melakukan tindakan ini.",
+  INVALID_COVER_PATH: "Thumbnail layanan tidak valid. Unggah ulang.",
+  COVER_IMAGE_REQUIRED: "Thumbnail wajib diunggah sebelum layanan dipublikasikan.",
+  SERVICE_BLOCKED: "Layanan ini diblokir oleh admin.",
+  SERVICE_ARCHIVED: "Layanan yang diarsipkan tidak dapat diubah.",
+  MAX_PUBLISHED_SERVICES: "Anda telah mencapai batas layanan terpublikasi.",
+  INVALID_SERVICE_TRANSITION: "Perubahan status layanan tidak valid.",
 };
 
 export const codeMessages: Record<ErrorCode, string> = {

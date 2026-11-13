@@ -14,7 +14,7 @@
 |---|---|---|
 | Foundation (Phase 0 subset) | Done (Copilot, `46b1093`) | Next.js 16, strict TS, Tailwind, shadcn/ui config, layout, placeholder pages |
 | Auth & profiles (Phases 1–3, identity subset) | Done on `feature/auth-profiles` (Claude Code) | Identity migrations + RLS + RPCs + storage; register/login/logout/password reset/email confirm; proxy session refresh and route protection; onboarding; profile edit and avatar upload; student verification (KTM upload or email domain); admin review queue; freelancer profile; public profile `/u/[username]`; Bahasa Indonesia UI for these flows; Vitest unit and PGlite database tests; CI workflow. Migrations applied to the hosted dev project; `src/types/database.ts` generated from it (matches the migrations: 5 tables, 4 RPCs, 4 enums, no private helpers exposed). **Manually verified on hosted dev by the product owner (2026-11-13):** register, login, onboarding, file upload, student verification. |
-| Still open from Phases 0–3 | Not started | Portfolio (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, translating the pre-existing landing, `/services` and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
+| Still open from Phases 0–3 | Not started | Portfolio CRUD (FR-PORT-01), admin freelancer suspension UI (`set_freelancer_status`), Playwright E2E, translating the pre-existing landing and `/jobs` placeholder copy to Bahasa Indonesia, server env module and Midtrans guard (with payments) |
 
 ### 0.1 Known issues (identity milestone)
 
@@ -135,7 +135,7 @@ Tests: pgTAP (auto-approval only for a confirmed exact-domain match; a pending-r
 
 Exit: a student can become an eligible freelancer by both methods. Non-students cannot.
 
-### Phase 4: Service marketplace (≈ 3 days)
+### Phase 4: Service marketplace (≈ 3 days) — Implemented
 
 Tasks:
 1. RPCs `set_service_status`, `admin_set_service_block`.
@@ -146,7 +146,7 @@ Tasks:
 
 Tests: pgTAP (publish preconditions; hidden when the freelancer is ineligible, suspended or blocked; publish limit); unit (search param parsing); E2E (J3; browse and search).
 
-Exit: published services are discoverable. Visibility rules hold.
+Exit: published services are discoverable. Visibility rules hold. The initial implementation is available at `/services`, `/services/[id]`, and `/dashboard/services`; it includes the `services`, `categories`, `portfolio_items`, `service_listings`, storage bucket, RLS policies, and `set_service_status` migration. Portfolio records are readable on public profiles and service details; portfolio CRUD, ordering, moderation, and E2E coverage remain planned.
 
 ### Phase 5: Job marketplace and proposals (≈ 3 days)
 
