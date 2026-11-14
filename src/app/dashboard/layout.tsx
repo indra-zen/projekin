@@ -8,8 +8,8 @@ export default async function DashboardLayout({
   const viewer = await requireOnboarded("/dashboard");
 
   return (
-    <div className="container grid gap-6 py-8 md:grid-cols-[220px_1fr] md:gap-10 md:py-12">
-      <aside className="md:sticky md:top-6 md:self-start">
+    <div className="container grid grid-cols-1 gap-6 py-8 lg:grid-cols-[232px_1fr] lg:gap-10 lg:py-12">
+      <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
         <DashboardNav isAdmin={viewer.isAdmin} />
       </aside>
       <div className="min-w-0">{children}</div>

@@ -18,8 +18,11 @@ const links: { href: Route; label: string }[] = [
 export function AdminNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Navigasi admin" className="-mx-4 overflow-x-auto px-4">
-      <ul className="flex gap-2">
+    <nav
+      aria-label="Navigasi admin"
+      className="bg-card border-border shadow-hard-sm rounded-2xl border-2"
+    >
+      <ul className="flex flex-wrap gap-2 p-2">
         {links.map(({ href, label }) => {
           const active =
             href === "/admin" ? pathname === href : pathname.startsWith(href);
@@ -29,10 +32,10 @@ export function AdminNav() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap",
+                  "inline-flex h-9 items-center rounded-xl border-2 px-3.5 text-sm font-bold whitespace-nowrap transition-colors",
                   active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "hover:bg-muted",
+                    ? "bg-highlight border-border shadow-hard-sm"
+                    : "hover:bg-highlight/60 hover:border-border border-transparent",
                 )}
               >
                 {label}

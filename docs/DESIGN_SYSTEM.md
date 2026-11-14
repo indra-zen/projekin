@@ -179,8 +179,8 @@ APIs are preserved. "New" means added alongside, not replacing.
 | Site header | `bg-card`, `border-b-2` ink, no blur. Nav links are chips; the active route gets `bg-highlight` + `border-2` |
 | Site footer | `border-t-2` ink on a lilac-tinted band |
 | Dashboard nav (desktop) | Outlined surface card; active item = `bg-highlight` tile, `border-2`, `shadow-hard-sm` |
-| Dashboard nav (mobile) | Horizontal **lilac rail** with a yellow active tile (reference 2's bottom bar). The scroll container needs padding so shadows are not clipped |
-| Admin nav / filter chips | Pills: `border-2` ink; active = `bg-highlight` + `shadow-hard-sm` |
+| Dashboard nav (below 1024 px) | Horizontal **primary-purple rail** with a yellow active tile (reference 2's bar); it scrolls sideways and centres the current page. Primary, not lilac, because small white text on lilac fails AA (4.29). The sidebar appears at `lg` (1024 px): at 768 px a 232 px sidebar left only 432 px for content |
+| Admin nav / filter chips | Toolbar card holding `border-2` chips that wrap onto several rows (never a hidden scroll); active = `bg-highlight` + `shadow-hard-sm` |
 | Page header | `eyebrow` sticker + `font-display` h1 (`text-3xl md:text-4xl`) + `text-muted-foreground` lead |
 | Listing card | `Card` with ledge; cover image inside a `border-b-2` frame; price in `font-display` |
 | Lists inside cards | `divide-y divide-hairline` |
@@ -201,7 +201,7 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 | 1 | Foundation | `globals.css` tokens, `@theme` shadows/fonts, base layer, utilities (§5), Bricolage in `layout.tsx`, `extendTailwindMerge` in `utils.ts`. Ledge offsets checked visually and kept (5 px strip + 2 px ink baseline) | Done (2026-11-14) |
 | – | Border-cascade audit | Bare `border`/`divide-*` in pages are now 1 px **ink** lines (global default). Internal dividers (`divide-y`, `border-t`/`-b`, about 26 uses) move to `hairline` while each page is restyled (phases 3–6) | Deferred to pages |
 | 2 | Primitives | All `ui/*`, new `NativeSelect`, form primitives, StatusBadge, VerificationBadge, review stars, UserAvatar. `EmptyState` moved to Phase 5 where its 10 call sites are replaced | Done (2026-11-14) |
-| 3 | Shell | Brand, site header, footer, dashboard and admin navs, AuthCard, LegalPage | — |
+| 3 | Shell | Brand, site header, footer, dashboard and admin navs, AuthCard, LegalPage | Done (2026-11-14) |
 | 4 | Public pages | Landing, `/services`, `/services/[id]`, `/services/[id]/order`, `/jobs`, `/jobs/[id]`, `/u/[username]` | — |
 | 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; replace copied select styles | — |
 | 6 | Admin | All `/admin` pages and admin forms | — |
@@ -224,3 +224,11 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 - No Dialog, Dropdown Menu, Tabs, Tooltip, Checkbox or Radio Group components exist in the app, so none were added. Native checkboxes and radios are styled in the base layer; add the shadcn components only when a feature needs them.
 - Pages that still pass old overrides (`border-primary/30`, `border-amber-200 bg-amber-50/60` on a few Cards, hand-built `rounded-2xl border` blocks, the 7 copied select class strings) keep working but look unfinished until their phase.
 - Existing search fields on `/services` and `/jobs` use `outline-none` with no focus style (a keyboard-accessibility gap that predates this work); fix in Phase 4.
+
+### 8.4 Implementation notes (Phase 3)
+
+- Bricolage is loaded with the `opsz` axis, so display letterforms tighten at large sizes. The landing hero h1 went from three lines to two at 1280 px.
+- Footer: brand and tagline, a "Jelajahi" column, an "Informasi" column (Terms, Privacy), and a bottom bar with the copyright and a "Mode uji · Midtrans Sandbox" sticker. The tagline, the third "Jelajahi" link and the sticker are new copy.
+- Auth pages share `AuthCard`: decorative blobs and a dot grid sit behind a `shadow-hard-lg` card.
+- Legal pages: readable card with hairline-divided sections, body text in full ink and a 68-character measure.
+- Dashboard nav icons are now distinct (Store for services, Images for portfolio).

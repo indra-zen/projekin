@@ -14,6 +14,9 @@ const display = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-bricolage",
   display: "swap",
+  // Optical size: letterforms tighten at large sizes, which keeps hero
+  // headings from wrapping an extra line.
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
