@@ -30,6 +30,45 @@ export const deliverOrderSchema = z.object({
     .trim()
     .min(1, { error: "Pesan pengiriman wajib diisi." })
     .max(5000, { error: "Pesan maksimal 5.000 karakter." }),
+  attachmentPaths: z.string().optional().default("[]"),
+});
+
+export const orderMessageSchema = z.object({
+  orderId: uuidSchema,
+  body: z
+    .string()
+    .trim()
+    .min(1, { error: "Pesan wajib diisi." })
+    .max(5000, { error: "Pesan maksimal 5.000 karakter." }),
+});
+
+export const revisionRequestSchema = z.object({
+  orderId: uuidSchema,
+  reason: z
+    .string()
+    .trim()
+    .min(10, { error: "Jelaskan revisi minimal 10 karakter." })
+    .max(2000, { error: "Alasan revisi maksimal 2.000 karakter." }),
+});
+
+export const disputeSchema = z.object({
+  orderId: uuidSchema,
+  reason: z
+    .string()
+    .trim()
+    .min(20, { error: "Alasan sengketa minimal 20 karakter." })
+    .max(2000, { error: "Alasan sengketa maksimal 2.000 karakter." }),
+});
+
+export const reviewSchema = z.object({
+  orderId: uuidSchema,
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z
+    .string()
+    .trim()
+    .max(2000, { error: "Ulasan maksimal 2.000 karakter." })
+    .optional()
+    .or(z.literal("")),
 });
 
 export const ORDER_STATUSES = [

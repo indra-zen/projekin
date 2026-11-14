@@ -86,6 +86,67 @@ export type Database = {
         }
         Relationships: []
       }
+      disputes: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          opened_by: string
+          order_id: string
+          reason: string
+          resolution: Database["public"]["Enums"]["dispute_resolution"] | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["dispute_status"]
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          opened_by: string
+          order_id: string
+          reason: string
+          resolution?: Database["public"]["Enums"]["dispute_resolution"] | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"]
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          opened_by?: string
+          order_id?: string
+          reason?: string
+          resolution?: Database["public"]["Enums"]["dispute_resolution"] | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["dispute_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       freelancer_profiles: {
         Row: {
           created_at: string
@@ -295,6 +356,45 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          order_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          order_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -736,6 +836,78 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          order_id: string
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+          reviewer_role: Database["public"]["Enums"]["review_role"]
+          service_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+          reviewer_role: Database["public"]["Enums"]["review_role"]
+          service_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          rating?: number
+          reviewee_id?: string
+          reviewer_id?: string
+          reviewer_role?: Database["public"]["Enums"]["review_role"]
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           blocked_at: string | null
@@ -1037,6 +1209,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      auto_complete_delivered_orders: { Args: never; Returns: number }
       cancel_order: {
         Args: { p_order_id: string; p_reason: string }
         Returns: string[]
@@ -1131,6 +1304,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_order_review: {
+        Args: { p_comment?: string; p_order_id: string; p_rating: number }
+        Returns: {
+          comment: string | null
+          created_at: string
+          id: string
+          order_id: string
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+          reviewer_role: Database["public"]["Enums"]["review_role"]
+          service_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1243,6 +1436,27 @@ export type Database = {
           verified_until: string
         }[]
       }
+      open_order_dispute: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          opened_by: string
+          order_id: string
+          reason: string
+          resolution: Database["public"]["Enums"]["dispute_resolution"] | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["dispute_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "disputes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reject_proposal: {
         Args: { p_proposal_id: string; p_reason?: string }
         Returns: {
@@ -1262,6 +1476,49 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_order_revision: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: {
+          amount: number
+          brief: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_days: number
+          due_at: string | null
+          freelancer_earnings: number
+          freelancer_id: string
+          id: string
+          job_id: string | null
+          order_number: number
+          paid_at: string | null
+          payment_due_at: string
+          payout_marked_at: string | null
+          payout_marked_by: string | null
+          payout_reference: string | null
+          payout_status: Database["public"]["Enums"]["payout_status"]
+          platform_fee: number
+          proposal_id: string | null
+          requirements: string | null
+          revisions_allowed: number
+          revisions_used: number
+          service_id: string | null
+          source: Database["public"]["Enums"]["order_source"]
+          status: Database["public"]["Enums"]["order_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1291,6 +1548,22 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "student_verifications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      send_order_message: {
+        Args: { p_body: string; p_order_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          id: string
+          order_id: string
+          sender_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_messages"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1432,6 +1705,8 @@ export type Database = {
       }
     }
     Enums: {
+      dispute_resolution: "release_to_freelancer" | "refund_client"
+      dispute_status: "open" | "resolved"
       freelancer_status: "active" | "suspended"
       job_status: "open" | "hiring" | "filled" | "closed"
       order_source: "service" | "job"
@@ -1453,6 +1728,7 @@ export type Database = {
       payout_status: "none" | "pending" | "paid"
       proposal_status: "submitted" | "accepted" | "rejected" | "withdrawn"
       refund_status: "none" | "pending" | "refunded"
+      review_role: "client" | "freelancer"
       service_status: "draft" | "published" | "paused" | "archived"
       student_verification_state:
         | "unverified"
@@ -1591,6 +1867,8 @@ export const Constants = {
   },
   public: {
     Enums: {
+      dispute_resolution: ["release_to_freelancer", "refund_client"],
+      dispute_status: ["open", "resolved"],
       freelancer_status: ["active", "suspended"],
       job_status: ["open", "hiring", "filled", "closed"],
       order_source: ["service", "job"],
@@ -1614,6 +1892,7 @@ export const Constants = {
       payout_status: ["none", "pending", "paid"],
       proposal_status: ["submitted", "accepted", "rejected", "withdrawn"],
       refund_status: ["none", "pending", "refunded"],
+      review_role: ["client", "freelancer"],
       service_status: ["draft", "published", "paused", "archived"],
       student_verification_state: [
         "unverified",

@@ -9,3 +9,6 @@ node_modules/
 
 .DS_Store
 .vercel
+private-key.pem
+public-key.pem
+.midtrans.access-keys

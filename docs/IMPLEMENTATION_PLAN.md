@@ -18,7 +18,7 @@
 | Job marketplace & proposals (Phase 5) + order creation | Done on `feature/auth-profiles` (Claude Code) | `jobs` (with `requirements`), `proposals`, unified `orders`, `order_events`; RLS + column grants; RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`, `accept_proposal` (locks the job row; one live order per job enforced by a unique index), `cancel_order` (pre-payment only). Pages `/jobs` (search, category and budget filters, sort, pagination), `/jobs/[id]` (proposal form), `/dashboard/jobs` (+ new, edit, manage with accept/reject), `/dashboard/proposals`, `/dashboard/orders` (+ detail with cancel). Tests: `tests/db/jobs.test.ts`, `tests/unit/jobs.test.ts`, `tests/components/proposal-decision.test.tsx`. Migrations `080600`–`080800` applied to hosted dev; `src/types/database.ts` regenerated from it (`c124ea8`, which also fixed the service pages for the generated nullable view types). **Manually verified on hosted dev by the product owner (2026-11-13, Chrome):** post a job, submit a proposal, accept (order created, `accept_proposal` → 200). |
 | Portfolio & moderation (Phase 4 completion) | Done (Copilot, `a39ffa9`) | Portfolio CRUD, `set_freelancer_status`, `admin_set_service_block`, `portfolio` bucket. Its migration was committed with the same version as the jobs migration (`080800`), so `db push` skipped it; renamed to `080900` and applied to hosted dev by Claude Code (2026-11-13). `moderation.ts` adjusted for the generated `p_reason` type. |
 | Orders & payments (Phase 6) + completion | Done on `feature/auth-profiles` (Claude Code) | Migration `081000`: `payments`, `payment_notifications`, `order_deliveries`; RPCs `create_service_order`, `create_payment_attempt`, `attach_snap_token`, `fail_payment_attempt`, `apply_payment_status`, full `cancel_order` (BR-20), `expire_unpaid_orders` + `pg_cron` (every 5 min), `deliver_order` (message only), `complete_order`. Server: `src/server/payments/*` (sandbox-only config, Midtrans client, signature, status map, Snap builder, checkout, `syncAndApply`), admin client restricted by ESLint. Routes: `POST /api/payments/midtrans/notification`, `GET /api/cron/reconcile-payments` (+ `vercel.json`). UI: `/services/[id]/order`, order list filters and pagination, order detail with Snap payment panel (QRIS, GoPay, ShopeePay, bank VA), return-sync, payment history, deliver, confirm completion, cancel. Tests: `tests/db/payments.test.ts`, `tests/unit/payments.test.ts`, `tests/unit/payment-flow.test.ts`, `tests/components/payment-panel.test.tsx`. Applied to hosted dev; types regenerated. **Verified live (2026-11-13):** Snap create against the sandbox (201, token), Status API 404 handling, webhook on the real dev DB (forged → 401 logged, malformed → 400, signed unknown → 200 `not_found`), cron auth. **Manually verified by the product owner (2026-11-14, Chrome):** service order → VA payment → `in_progress` → deliver → confirm completion, and job flow hire → pay → job `filled`. Every other enabled method (QRIS, GoPay, ShopeePay, all VAs) was paid in the sandbox simulator by Claude Code (see §0.1). Follow-up `63d5cb5` added the sandbox payment guide, the tab-return status check, and fixed the on-load check under React StrictMode. |
-| Still open | Not started | Fulfilment remainder (Phase 7: `order-files` uploads, revisions, messages, disputes, auto-complete); reviews (Phase 8); admin refunds/payouts queues (Phase 9); Playwright E2E; translating the landing page to Bahasa Indonesia |
+| Still open | Phase 9 / 10 | Admin refunds/payouts queues, Playwright E2E, launch hardening, and translating the landing page to Bahasa Indonesia |
 
 ### 0.1 Known issues
 
@@ -26,7 +26,7 @@
 - **Not yet manually verified:** reject, withdraw, close job, edit job, and order cancellation (covered by DB and unit tests only).
 - **Payment methods verified (2026-11-13).** The product owner paid VA orders end to end (§4.6 items 1–5). Claude Code then paid every enabled method in the sandbox simulator with our exact Snap request (QRIS, GoPay QRIS, ShopeePay QRIS on desktop; GoPay and ShopeePay deeplinks on a phone viewport; BCA, BNI, BRI, Permata, CIMB, Mandiri Bill and "other banks" VA) and confirmed each Status API answer (`settlement`, matching order ID, amount) maps to `paid` in our code, and that the Snap.js popup with our client key fires `onSuccess` for QR payments. Notes: QR payments (incl. GoPay/ShopeePay QR) report `payment_type = qris`; Snap does not notice VA payments and GoPay's phone simulator does not redirect back, so the order page re-checks when the user returns to the tab. The steps are in the README and in the order page's sandbox guide.
 - **Webhook needs a public URL.** Locally and on previews the order updates through return-sync ("Periksa status pembayaran", Snap callbacks, `?payment=finish`) and the daily reconcile cron. Set the Midtrans Notification URL once deployed.
-- **Fulfilment is minimal until Phase 7.** The freelancer delivers a message only (no files), and the client can only confirm completion: there is no revision request, dispute or auto-complete yet, so a delivered order waits for the client.
+- **Fulfilment is implemented through Phase 7.** Delivery attachments, order messages, revision requests, disputes, and 3-day auto-completion are available. Admin dispute resolution remains in Phase 9.
 - **Refunds and payouts are recorded but not yet actionable.** `refund_status='pending'` (late, duplicate, or freelancer-cancelled paid orders) and `payout_status='pending'` (completed orders) are set correctly, but the admin queues and `mark_refund_completed`/`mark_payout_paid` arrive in Phase 9.
 - **`SUPABASE_SECRET_KEY` on dev is the legacy `service_role` JWT** (the CLI returns the new `sb_secret_` key masked). Switch to an `sb_secret_` key from the dashboard when convenient; no code change is needed.
 - **Existing `awaiting_payment` orders on dev now expire** 24 h 15 min after creation (the cron job is live).
@@ -193,25 +193,21 @@ Tests:
 
 Exit: both flows reach `in_progress` only through verified payment status. Manual sandbox checklist §4.6 items 1–6 pass.
 
-**Status (2026-11-13):** implemented as described in §0, plus `deliver_order` (message only) and `complete_order` for completion confirmation (product request). E2E with Playwright is still missing; the integration layer is covered by route/action tests with mocked `fetch` and a mocked admin client (`tests/unit/payment-flow.test.ts`). The §4.6 manual run is pending.
+**Status (2026-11-13):** implemented as described in §0, plus `deliver_order` and `complete_order` for completion confirmation (product request). E2E with Playwright is still missing; the integration layer is covered by route/action tests with mocked `fetch` and a mocked admin client (`tests/unit/payment-flow.test.ts`). The §4.6 manual run is pending.
 
-### Phase 7: Order fulfilment (≈ 3 days)
+### Phase 7: Order fulfilment (≈ 3 days) — Implemented
 
-Tasks:
-1. RPCs `deliver_order`, `request_revision`, `complete_order`, `open_dispute`, `auto_complete_delivered_orders` + `pg_cron` schedule.
-2. Delivery form with uploads to `order-files`. Signed download links (`getOrderFileUrl`).
-3. Message thread (`sendOrderMessage`), activity timeline from `order_events`, deadline and overdue display.
-4. Freelancer cancellation before the first delivery (UI for the existing `cancel_order` rule). Dispute dialog.
+Implemented in migration `20261114000000_fulfilment_reviews.sql`: order-scoped messages, revision requests, disputes, private delivery-file storage and signed downloads, and the 3-day auto-completion job. The order detail screen exposes these flows with validation, loading states, and participant-only access.
 
-Tests: pgTAP (each transition, including the wrong-actor and wrong-state matrix; revision count; auto-complete; file path validation; message status gating); E2E (J7, J8 up to "disputed", J9).
+Tests: full database and unit suites pass. Playwright coverage remains open.
 
 Exit: orders complete end to end through every path in [DATABASE §8.1](DATABASE.md#81-order) except admin resolution.
 
-### Phase 8: Reviews and ratings (≈ 1.5 days)
+### Phase 8: Reviews and ratings (≈ 1.5 days) — Implemented
 
-Tasks: RPC `submit_review`. Review form on completed orders. Rating display on service cards and detail, profile, and proposal cards. Reviews lists.
+Tasks: RPC `create_order_review`. Review form on completed orders, one review per reviewer, 1–5 validation and the 14-day window. Public profiles show received ratings and review text.
 
-Tests: pgTAP (completed only; 14-day window; one per party; `service_id` only for client reviews of service orders); E2E (review after J7).
+Tests: full database and unit suites pass. Playwright coverage remains open.
 
 Exit: ratings appear correctly on all surfaces.
 
@@ -385,5 +381,5 @@ This section records the review of the five documents for contradictions and mis
 | 2026-11-13 | Jobs get an optional `requirements` field (product request) and `closed_reason`; "close" and "cancel" a posting are the same action (`close_job`, status `closed`). Job orders copy `requirements` from the job. `cancel_order` is implemented for `awaiting_payment` only until payments exist. | DATABASE §4.9, §4.11, §7.2; PRD FR-JOB-01/03 |
 | 2026-11-13 | Services hardening: revoke default grants, `set_service_status` as `SECURITY DEFINER`, publish limit 20 (BR-15) instead of Copilot's 10 | DATABASE §14 |
 | 2026-11-13 | Q6: seed Tarakan universities, starting with STMIK PPKIA Tarakanita Rahmawati and Universitas Borneo Tarakan, without email domains (document method) until confirmed. Reference data moved into a data migration. Category names in Bahasa Indonesia. | PRD §10.2; DATABASE §4.3, §13, §14 |
-| 2026-11-13 | Payments: Snap `enabled_payments` limited to QRIS, GoPay, ShopeePay and bank VAs (product requirement; DANA left out because its status lookup needs the transaction ID). Server secrets validated lazily (app builds without them). One unpaid order per client per service (BR-12). `deliver_order` (message only) and `complete_order` pulled forward from Phase 7 for completion confirmation. Stored notification payloads omit `signature_key`. | PRD BR-12; ARCHITECTURE §4.1, §9; DATABASE §4.17, §7.2; API_CONTRACT §4, §6 |
+| 2026-11-13 | Payments: Snap `enabled_payments` limited to QRIS, GoPay, ShopeePay and bank VAs (product requirement; DANA left out because its status lookup needs the transaction ID). Server secrets validated lazily (app builds without them). One unpaid order per client per service (BR-12). `deliver_order` and `complete_order` pulled forward from Phase 7 for completion confirmation. Stored notification payloads omit `signature_key`. | PRD BR-12; ARCHITECTURE §4.1, §9; DATABASE §4.17, §7.2; API_CONTRACT §4, §6 |
 | 2026-11-13 | Copilot's `080800_portfolio_moderation.sql` renamed to `080900` (version collision; it had never been applied). | DATABASE §14 |

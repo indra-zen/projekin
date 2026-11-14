@@ -5,7 +5,12 @@ import { notFound } from "next/navigation";
 import {
   CancelOrderForm,
   CompleteOrderForm,
+  DeliveryAttachments,
   DeliverOrderForm,
+  DisputeForm,
+  OrderMessageForm,
+  OrderReviewForm,
+  RevisionRequestForm,
 } from "@/components/orders/order-forms";
 import { PaymentPanel } from "@/components/orders/payment-panel";
 import { StatusBadge } from "@/components/jobs/status-badge";
@@ -53,7 +58,14 @@ export default async function OrderDetailPage({
     .maybeSingle();
   if (!order) notFound();
 
-  const [{ data: events }, { data: deliveries }, { data: payments }] =
+  const [
+    { data: events },
+    { data: deliveries },
+    { data: payments },
+    { data: messages },
+    { data: disputes },
+    { data: reviews },
+  ] =
     await Promise.all([
       supabase
         .from("order_events")
@@ -62,7 +74,7 @@ export default async function OrderDetailPage({
         .order("created_at", { ascending: true }),
       supabase
         .from("order_deliveries")
-        .select("id, delivery_number, message, created_at")
+        .select("id, delivery_number, message, attachment_paths, created_at")
         .eq("order_id", order.id)
         .order("delivery_number", { ascending: false }),
       // RLS: the client and admins see payments; the freelancer gets none.
@@ -73,6 +85,20 @@ export default async function OrderDetailPage({
         )
         .eq("order_id", order.id)
         .order("attempt_no", { ascending: false }),
+      supabase
+        .from("order_messages")
+        .select("id, sender_id, body, created_at")
+        .eq("order_id", order.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("disputes")
+        .select("id, opened_by, reason, status, resolution, admin_note, created_at")
+        .eq("order_id", order.id)
+        .maybeSingle(),
+      supabase
+        .from("reviews")
+        .select("id, reviewer_id, reviewer_role, rating, comment, created_at")
+        .eq("order_id", order.id),
     ]);
 
   const isClient = viewer.user.id === order.client_id;
@@ -85,6 +111,7 @@ export default async function OrderDetailPage({
   const refundPending = attempts.some((p) => p.refund_status === "pending");
   const deliveryList = deliveries ?? [];
   const latestDelivery = deliveryList[0];
+  const ownReview = (reviews ?? []).some((review) => review.reviewer_id === viewer.user.id);
 
   const awaitingPayment = order.status === "awaiting_payment";
   const canCancel =
@@ -203,7 +230,11 @@ export default async function OrderDetailPage({
                 : ""}
             </p>
             {isClient ? (
-              <CompleteOrderForm orderId={order.id} />
+              <div className="space-y-3">
+                <CompleteOrderForm orderId={order.id} />
+                <RevisionRequestForm orderId={order.id} />
+                <DisputeForm orderId={order.id} />
+              </div>
             ) : (
               <p className="text-muted-foreground">
                 Menunggu klien mengonfirmasi bahwa pesanan selesai.
@@ -249,11 +280,47 @@ export default async function OrderDetailPage({
                   order.cancellation_reason}
               </p>
             ) : null}
+
             {refundPending ? (
               <p className="font-medium text-amber-800">
                 {refundStatusLabels.pending}.
               </p>
             ) : null}
+
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {order.status === "in_progress" && !isFreelancer ? (
+        <Card className="rounded-2xl">
+          <CardContent className="pt-6">
+            <DisputeForm orderId={order.id} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {order.status === "disputed" && disputes ? (
+        <Card className="border-destructive/30 rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Sengketa sedang ditinjau</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="whitespace-pre-wrap">{disputes.reason}</p>
+            <p className="text-muted-foreground">
+              Dibuka {formatDateTime(disputes.created_at)}. Admin akan menentukan
+              apakah dana diteruskan ke freelancer atau dikembalikan ke klien.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {order.status === "completed" && !ownReview ? (
+        <Card className="border-primary/30 rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Bagikan pengalaman Anda</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <OrderReviewForm orderId={order.id} />
           </CardContent>
         </Card>
       ) : null}
@@ -274,9 +341,46 @@ export default async function OrderDetailPage({
                   <p className="leading-6 whitespace-pre-wrap">
                     {delivery.message}
                   </p>
+                  <DeliveryAttachments paths={delivery.attachment_paths ?? []} />
                 </li>
               ))}
             </ol>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {order.status !== "awaiting_payment" && order.status !== "cancelled" ? (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Pesan pesanan</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {messages && messages.length > 0 ? (
+              <ol className="space-y-3">
+                {messages.map((message) => (
+                  <li
+                    key={message.id}
+                    className={`rounded-xl p-3 text-sm ${
+                      message.sender_id === viewer.user.id
+                        ? "bg-primary/10 ml-6"
+                        : "bg-muted mr-6"
+                    }`}
+                  >
+                    <p className="text-muted-foreground mb-1 text-xs">
+                      {message.sender_id === viewer.user.id ? "Anda" : "Pihak lain"} ·{" "}
+                      {formatDateTime(message.created_at)}
+                    </p>
+                    <p className="whitespace-pre-wrap">{message.body}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Belum ada pesan. Gunakan ruang ini untuk menyepakati detail
+                pengerjaan.
+              </p>
+            )}
+            <OrderMessageForm orderId={order.id} />
           </CardContent>
         </Card>
       ) : null}

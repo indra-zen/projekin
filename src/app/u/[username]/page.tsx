@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Link from "next/link";
@@ -31,7 +31,8 @@ const loadProfile = cache(async (username: string) => {
     )
     .eq("user_id", profile.id)
     .maybeSingle();
-  const [{ data: services }, { data: portfolio }] = await Promise.all([
+  const [{ data: services }, { data: portfolio }, { data: reviews }] =
+    await Promise.all([
     supabase
       .from("service_listings")
       .select("id, title, price, delivery_days")
@@ -42,8 +43,20 @@ const loadProfile = cache(async (username: string) => {
       .select("id, title, description, external_url")
       .eq("freelancer_id", profile.id)
       .order("sort_order"),
+    supabase
+      .from("reviews")
+      .select("id, rating, comment, reviewer:profiles!reviews_reviewer_id_fkey(username, full_name)")
+      .eq("reviewee_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
-  return { profile, freelancer, services: services ?? [], portfolio: portfolio ?? [] };
+  return {
+    profile,
+    freelancer,
+    services: services ?? [],
+    portfolio: portfolio ?? [],
+    reviews: reviews ?? [],
+  };
 });
 
 export async function generateMetadata({
@@ -64,7 +77,7 @@ export default async function PublicProfilePage({
   const { username } = await params;
   const data = await loadProfile(username);
   if (!data) notFound();
-  const { profile, freelancer, services, portfolio } = data;
+  const { profile, freelancer, services, portfolio, reviews } = data;
   const verified = isVerifiedStudent(freelancer);
 
   return (
@@ -166,6 +179,42 @@ export default async function PublicProfilePage({
                 </div>
               </section>
             ) : null}
+          </section>
+        ) : null}
+
+        {reviews.length > 0 ? (
+          <section className="mt-8 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-bold tracking-widest uppercase">
+                Ulasan
+              </h2>
+              <span className="text-muted-foreground flex items-center gap-1 text-sm">
+                <Star className="size-4 fill-current text-amber-500" />
+                {(
+                  reviews.reduce((sum, review) => sum + review.rating, 0) /
+                  reviews.length
+                ).toFixed(1)}{" "}
+                ({reviews.length})
+              </span>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {reviews.map((review) => (
+                <li key={review.id} className="bg-muted/50 rounded-xl p-4">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-semibold">
+                      {review.reviewer?.full_name ??
+                        `@${review.reviewer?.username ?? "pengguna"}`}
+                    </span>
+                    <span className="text-amber-600">{"★".repeat(review.rating)}</span>
+                  </div>
+                  {review.comment ? (
+                    <p className="text-muted-foreground mt-2 text-sm leading-6 whitespace-pre-wrap">
+                      {review.comment}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 

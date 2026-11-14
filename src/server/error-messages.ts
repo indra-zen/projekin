@@ -92,6 +92,18 @@ export const reasonMessages: Record<string, string> = {
   ORDER_NOT_DELIVERED:
     "Pesanan hanya dapat diselesaikan setelah freelancer mengirim hasil kerja.",
   INVALID_MESSAGE: "Pesan wajib diisi (maksimal 5.000 karakter).",
+  MESSAGES_NOT_AVAILABLE: "Pesan tersedia setelah pembayaran diterima.",
+  INVALID_REVISION_REASON: "Alasan revisi harus 10–2.000 karakter.",
+  NO_REVISIONS_REMAINING: "Jatah revisi untuk pesanan ini sudah habis.",
+  INVALID_DISPUTE_REASON: "Alasan sengketa harus 20–2.000 karakter.",
+  ORDER_NOT_DISPUTABLE:
+    "Sengketa hanya dapat dibuka saat pesanan sedang dikerjakan atau sudah dikirim.",
+  DISPUTE_EXISTS: "Sengketa untuk pesanan ini sudah dibuka.",
+  REVIEW_WINDOW_CLOSED:
+    "Ulasan hanya dapat diberikan dalam 14 hari setelah pesanan selesai.",
+  INVALID_RATING: "Rating harus antara 1 sampai 5.",
+  INVALID_REVIEW_COMMENT: "Ulasan maksimal 2.000 karakter.",
+  ALREADY_REVIEWED: "Anda sudah memberikan ulasan untuk pesanan ini.",
   TOO_MANY_ATTACHMENTS: "Maksimal 10 lampiran per pengiriman.",
   ATTACHMENT_NOT_FOUND: "Lampiran tidak ditemukan. Unggah ulang file Anda.",
   // Payments

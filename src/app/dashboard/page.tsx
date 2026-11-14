@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { VerificationBadge } from "@/components/verification/verification-badge";
 import { getCapabilities } from "@/lib/capabilities";
+import { createClient } from "@/lib/supabase/server";
 import { getVerificationStatus, requireOnboarded } from "@/server/auth";
 
 export const metadata: Metadata = { title: "Dasbor" };
@@ -52,6 +53,25 @@ export default async function DashboardPage() {
     isAdmin: viewer.isAdmin,
   });
   const { profile } = viewer;
+  const supabase = await createClient();
+  const [{ count: clientOrders }, { count: freelancerOrders }, { count: pendingActions }] =
+    await Promise.all([
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", viewer.user.id)
+        .in("status", ["awaiting_payment", "delivered", "disputed"]),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("freelancer_id", viewer.user.id)
+        .in("status", ["in_progress", "disputed"]),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", viewer.user.id)
+        .eq("status", "delivered"),
+    ]);
 
   return (
     <div className="space-y-8">
@@ -76,6 +96,30 @@ export default async function DashboardPage() {
             @{profile.username} · lihat profil publik
           </Link>
         </div>
+
+        <section aria-label="Ringkasan aktivitas" className="grid gap-3 sm:grid-cols-3">
+          <Link href="/dashboard/orders" className="bg-card rounded-2xl border p-4 transition-shadow hover:shadow-sm">
+            <p className="text-muted-foreground text-sm">Pesanan klien perlu perhatian</p>
+            <p className="mt-1 text-2xl font-bold">{clientOrders ?? 0}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Pembayaran, pengiriman, atau sengketa
+            </p>
+          </Link>
+          <Link href="/dashboard/orders?role=freelancer" className="bg-card rounded-2xl border p-4 transition-shadow hover:shadow-sm">
+            <p className="text-muted-foreground text-sm">Pekerjaan aktif</p>
+            <p className="mt-1 text-2xl font-bold">{freelancerOrders ?? 0}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Dikerjakan atau dalam sengketa
+            </p>
+          </Link>
+          <Link href="/dashboard/orders?status=delivered" className="border-primary/30 bg-primary/5 rounded-2xl border p-4 transition-shadow hover:shadow-sm">
+            <p className="text-primary text-sm font-semibold">Notifikasi penting</p>
+            <p className="mt-1 text-2xl font-bold">{pendingActions ?? 0}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Hasil kerja menunggu konfirmasi
+            </p>
+          </Link>
+        </section>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

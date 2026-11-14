@@ -174,7 +174,7 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `submitProposal` / `withdrawProposal` | `submitProposalAction` / `withdrawProposalAction({ proposalId })` | `submitProposalAction` uses `guardVerifiedFreelancer()` (database state) before the RPC |
 | `rejectProposal` / `acceptProposal` | `rejectProposalAction` / `acceptProposalAction` | Accept redirects to `/dashboard/orders/{orderId}` |
 | `cancelOrder` | `cancelOrderAction` (`orders.ts`) | Full BR-20. Expires the returned live attempts at Midtrans (best effort). |
-| `createServiceOrder` / `deliverOrder` / `completeOrder` | `createServiceOrderAction` / `deliverOrderAction` / `completeOrderAction` (`orders.ts`) | Create redirects to `/dashboard/orders/{orderId}`. `deliverOrder` is message-only until the `order-files` bucket arrives (Phase 7). |
+| `createServiceOrder` / `deliverOrder` / `completeOrder` | `createServiceOrderAction` / `deliverOrderAction` / `completeOrderAction` (`orders.ts`) | Create redirects to `/dashboard/orders/{orderId}`. `deliverOrder` accepts up to 10 validated paths from the private `order-files` bucket. |
 | `startPayment` / `syncPaymentStatus` | `startPaymentAction({ orderId })` / `syncPaymentStatusAction({ orderId })` (`payments.ts`) | Both return `ActionResult` (not form state); called from `PaymentPanel`. |
 
 Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
