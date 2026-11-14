@@ -35,7 +35,7 @@ export function UserAvatar({
   return (
     <Avatar className={cn("size-10", className)}>
       {src ? <AvatarImage src={src} alt={name ?? username} /> : null}
-      <AvatarFallback className="bg-secondary text-secondary-foreground font-bold">
+      <AvatarFallback className="bg-highlight text-foreground font-bold">
         {initials(name, username)}
       </AvatarFallback>
     </Avatar>

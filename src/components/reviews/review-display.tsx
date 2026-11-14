@@ -26,7 +26,7 @@ export function RatingSummary({
         className,
       )}
     >
-      <Star className="size-4 fill-current text-amber-500" aria-hidden />
+      <Star className="fill-highlight text-foreground size-4" aria-hidden />
       <span className="sr-only">Rating rata-rata</span>
       <span className="text-foreground font-semibold">{value}</span>
       <span>({count} ulasan)</span>
@@ -56,10 +56,10 @@ export function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
             <span
               role="img"
               aria-label={`${review.rating} dari 5 bintang`}
-              className="shrink-0 text-amber-600"
+              className="text-foreground shrink-0"
             >
               {"★".repeat(review.rating)}
-              <span className="text-muted-foreground/40">
+              <span className="text-foreground/25">
                 {"★".repeat(Math.max(0, 5 - review.rating))}
               </span>
             </span>

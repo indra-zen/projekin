@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import "@/app/globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -7,6 +7,13 @@ import { SiteHeader } from "@/components/site-header";
 const font = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta",
+});
+
+// Display face for headings (docs/DESIGN_SYSTEM.md §4). Self-hosted at build.
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -22,8 +29,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id">
-      <body className={`${font.variable} antialiased`}>
+    <html lang="id" className={`${font.variable} ${display.variable}`}>
+      <body className="antialiased">
         <SiteHeader />
         <main>{children}</main>
         <SiteFooter />

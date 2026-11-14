@@ -19,7 +19,7 @@ This document is the single source of truth for Projekin's visual language. Both
 4. **Primitives carry the style.** The look lives in `src/components/ui/*` and a few shared components. Pages should need few or no style overrides.
 5. **Accessible by default.** WCAG 2.1 AA (PRD NFR-06): every text/background pair in §2 is measured; focus is always visible; motion respects `prefers-reduced-motion`.
 6. **No new dependencies.** Everything is built with Tailwind v4 `@theme` tokens, CSS, and `next/font`.
-7. **Light only.** There is no dark mode. Pages set `color-scheme: light`. The existing `dark:` classes in shadcn primitives stay in place and do nothing.
+7. **Light only.** There is no dark mode. Pages set `color-scheme: light`, and `globals.css` redefines the `dark` variant as `.dark` (a class nothing sets), because Tailwind v4's default `dark:` follows the OS setting and would have tinted inputs through `dark:bg-input/30`. The remaining `dark:` classes are inert.
 
 ---
 
@@ -128,7 +128,7 @@ All transforms and transitions are wrapped in `motion-safe:`. A global `@media (
 | Labels, buttons | Plus Jakarta Sans | `text-sm`, 700 | |
 | Eyebrow | Plus Jakarta Sans | 12 px, 800, uppercase, tracking 0.12em, as a sticker chip | `eyebrow` utility |
 
-- Both fonts are loaded with `next/font/google` in [`src/app/layout.tsx`](../src/app/layout.tsx) (self-hosted at build time, no runtime request to Google, no CSP impact). Bricolage Grotesque: `subsets: ["latin"]`, variable weight, `display: "swap"`, exposed as `--font-bricolage` → `--font-display`. Plus Jakarta Sans keeps `--font-plus-jakarta` → `--font-sans`.
+- Both fonts are loaded with `next/font/google` in [`src/app/layout.tsx`](../src/app/layout.tsx), and their variable classes sit on `<html>` (not `<body>`): Tailwind reads `--font-sans` on `<html>`, so variables defined on `<body>` never resolved and the app silently rendered the system font (self-hosted at build time, no runtime request to Google, no CSP impact). Bricolage Grotesque: `subsets: ["latin"]`, variable weight, `display: "swap"`, exposed as `--font-bricolage` → `--font-display`. Plus Jakarta Sans keeps `--font-plus-jakarta` → `--font-sans`.
 - Indonesian copy uses basic Latin, so the `latin` subset covers it.
 
 ### 4.1 `cn()` and custom tokens
@@ -157,8 +157,8 @@ APIs are preserved. "New" means added alongside, not replacing.
 |---|---|---|
 | Button | [`ui/button.tsx`](../src/components/ui/button.tsx) | `border-2` ink, `rounded-xl`, `font-bold`. `default` = primary + `shadow-hard`; `secondary` = orange + `shadow-hard`; `outline` = surface + `shadow-hard`; `ghost` = no border/shadow, `hover:bg-highlight/60`. **New variants:** `accent` (pink, ink text), `destructive`. Sizes unchanged (`h-11` default). Press and hover states per §3.3 |
 | Card | [`ui/card.tsx`](../src/components/ui/card.tsx) | `bg-card`, `border-2` ink, `rounded-2xl` by default, `shadow-ledge`. Sub-components unchanged |
-| Input / Textarea | [`ui/input.tsx`](../src/components/ui/input.tsx), [`ui/textarea.tsx`](../src/components/ui/textarea.tsx) | `h-11` (input), `border-2` ink, `rounded-xl`, `bg-card`; focus adds `shadow-hard-sm` + outline; invalid per §3.3 |
-| NativeSelect **(new)** | `ui/native-select.tsx` | Native `<select>` matching Input, with a CSS chevron. Replaces the 7 copied select class strings. Stays native because forms must work without client JS (ARCHITECTURE §3) |
+| Input / Textarea | [`ui/input.tsx`](../src/components/ui/input.tsx), [`ui/textarea.tsx`](../src/components/ui/textarea.tsx) | `h-11` (input), `border-2` ink, `rounded-xl`, `bg-card`; `shadow-hard-sm` at rest, `shadow-hard` plus the global outline on focus; invalid per §3.3 |
+| NativeSelect **(new)** | [`ui/native-select.tsx`](../src/components/ui/native-select.tsx) | Native `<select>` matching Input, with a CSS chevron. Replaces the 7 copied select class strings. Stays native because forms must work without client JS (ARCHITECTURE §3) |
 | Label | [`ui/label.tsx`](../src/components/ui/label.tsx) | `font-bold` |
 | Badge | [`ui/badge.tsx`](../src/components/ui/badge.tsx) | `border-2` ink, `rounded-full`, `font-bold`; variants map to tokens |
 | Alert | [`ui/alert.tsx`](../src/components/ui/alert.tsx) | `border-2` ink, `rounded-xl`; default = surface; destructive = `danger-soft` fill with ink text, `destructive` icon and border |
@@ -167,7 +167,7 @@ APIs are preserved. "New" means added alongside, not replacing.
 | Field / FormAlert / SubmitButton | [`forms/form-primitives.tsx`](../src/components/forms/form-primitives.tsx) | `FormAlert` success = `success` fill; error = destructive Alert. `SubmitButton`'s `variant` union widened to the new Button variants |
 | StatusBadge / VerificationBadge | [`jobs/status-badge.tsx`](../src/components/jobs/status-badge.tsx), [`verification/verification-badge.tsx`](../src/components/verification/verification-badge.tsx) | Tones per §2.1; no raw `amber-*`/`red-*` |
 | RatingSummary / ReviewList | [`reviews/review-display.tsx`](../src/components/reviews/review-display.tsx) | Stars in ink outline with `highlight` fill (no `amber-*`) |
-| EmptyState **(new)** | `components/empty-state.tsx` | Title, body, optional action; outlined dashed card on `muted`. Replaces 10 duplicated blocks |
+| EmptyState **(new, Phase 5)** | `components/empty-state.tsx` | Title, body, optional action; outlined dashed card on `muted`. Replaces 10 duplicated blocks |
 | Brand | [`brand.tsx`](../src/components/brand.tsx) | "P" tile: primary, `border-2`, `shadow-hard-sm`; wordmark in `font-display` |
 
 ---
@@ -198,8 +198,9 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 | # | Phase | Scope | Status |
 |---|---|---|---|
 | 0 | Preparation | Branch, design references committed, this document, ARCHITECTURE/IMPLEMENTATION_PLAN pointers | Done (2026-11-14) |
-| 1 | Foundation | `globals.css` tokens, `@theme` shadows/radii/fonts, base layer, utilities (§5), border-cascade audit (bare `border`/`divide-*` → ink or `hairline`), Bricolage in `layout.tsx`, `extendTailwindMerge` in `utils.ts`. Visual check and tuning of the ledge offsets | Next |
-| 2 | Primitives | All `ui/*`, new `NativeSelect` and `EmptyState`, form primitives, StatusBadge, VerificationBadge, review stars | — |
+| 1 | Foundation | `globals.css` tokens, `@theme` shadows/fonts, base layer, utilities (§5), Bricolage in `layout.tsx`, `extendTailwindMerge` in `utils.ts`. Ledge offsets checked visually and kept (5 px strip + 2 px ink baseline) | Done (2026-11-14) |
+| – | Border-cascade audit | Bare `border`/`divide-*` in pages are now 1 px **ink** lines (global default). Internal dividers (`divide-y`, `border-t`/`-b`, about 26 uses) move to `hairline` while each page is restyled (phases 3–6) | Deferred to pages |
+| 2 | Primitives | All `ui/*`, new `NativeSelect`, form primitives, StatusBadge, VerificationBadge, review stars, UserAvatar. `EmptyState` moved to Phase 5 where its 10 call sites are replaced | Done (2026-11-14) |
 | 3 | Shell | Brand, site header, footer, dashboard and admin navs, AuthCard, LegalPage | — |
 | 4 | Public pages | Landing, `/services`, `/services/[id]`, `/services/[id]/order`, `/jobs`, `/jobs/[id]`, `/u/[username]` | — |
 | 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; replace copied select styles | — |
@@ -216,3 +217,10 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 ### 8.2 Known inconsistencies being fixed
 
 `Card` radius overridden at about 50 call sites; about 40 hand-built card `div`s with differing padding and hover effects; mismatched control heights (input `h-9`, selects `h-10`, button `h-11`); the select style copied 7 times; raw `amber-*`/`red-*` colours in 10 files; 10 duplicated empty states; the page header hand-written in 15 pages with four different h1 sizes; three different chip styles; duplicate `BriefcaseBusiness` icons in the dashboard nav; no active link state in the site header.
+
+### 8.3 Implementation notes (Phases 1–2)
+
+- `h1` and `h2` use `font-display` globally (base layer), so unrestyled pages already pick up Bricolage. It is wider than the old font; the landing hero now wraps to three lines. Fix per page.
+- No Dialog, Dropdown Menu, Tabs, Tooltip, Checkbox or Radio Group components exist in the app, so none were added. Native checkboxes and radios are styled in the base layer; add the shadcn components only when a feature needs them.
+- Pages that still pass old overrides (`border-primary/30`, `border-amber-200 bg-amber-50/60` on a few Cards, hand-built `rounded-2xl border` blocks, the 7 copied select class strings) keep working but look unfinished until their phase.
+- Existing search fields on `/services` and `/jobs` use `outline-none` with no focus style (a keyboard-accessibility gap that predates this work); fix in Phase 4.

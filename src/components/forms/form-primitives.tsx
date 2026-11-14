@@ -15,16 +15,16 @@ export function FormAlert({ state }: { state: FormState<unknown> }) {
   if (state.ok) {
     if (!state.message) return null;
     return (
-      <Alert className="border-primary/30 bg-secondary/60">
+      <Alert className="bg-success">
         <CheckCircle2 className="text-primary" />
-        <AlertDescription className="text-secondary-foreground">
+        <AlertDescription className="text-foreground">
           {state.message}
         </AlertDescription>
       </Alert>
     );
   }
   return (
-    <Alert variant="destructive" className="border-destructive/30">
+    <Alert variant="destructive">
       <AlertCircle />
       <AlertDescription>{state.error.message}</AlertDescription>
     </Alert>
@@ -98,7 +98,8 @@ export function SubmitButton({
   children: React.ReactNode;
   pendingLabel?: string;
   className?: string;
-  variant?: "default" | "secondary" | "outline" | "ghost";
+  variant?:
+    "default" | "secondary" | "accent" | "destructive" | "outline" | "ghost";
   disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
@@ -108,6 +109,7 @@ export function SubmitButton({
       className={className}
       variant={variant}
       disabled={pending || disabled}
+      aria-busy={pending}
     >
       {pending ? (
         <>
