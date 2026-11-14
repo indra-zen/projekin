@@ -85,6 +85,7 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
      | Other banks | Snap issues a BNI VA (bank code 009): use the BNI simulator. |
    - **Deployed environment:** set the Midtrans Sandbox dashboard → Settings → Payment → **Notification URL** to `https://<your-domain>/api/payments/midtrans/notification`. The handler verifies the signature, logs every notification in `payment_notifications`, and applies only what the Status API confirms.
    - Unpaid orders are cancelled automatically 24 h + 15 min after creation by the `expire-unpaid-orders` `pg_cron` job, which the payments migration schedules. A daily Vercel Cron (`vercel.json`) calls `/api/cron/reconcile-payments` with `CRON_SECRET` to heal missed notifications. Delivered orders are completed automatically after 3 days by the `auto-complete-delivered-orders` `pg_cron` job (every 15 minutes).
+   - **Vercel region:** `vercel.json` pins server functions to `sin1` (Singapore), next to the Supabase project in `ap-southeast-1`. If the Supabase project lives elsewhere, set `regions` to the closest Vercel region; every page makes several database round trips.
    - **Admin money operations:** `/admin` shows the queues. Resolve disputes at `/admin/disputes`. After refunding in the Midtrans dashboard (or by transfer), record the reference at `/admin/refunds`. After paying a freelancer off-platform, record it at `/admin/payouts`. Freelancers see their totals at `/dashboard/earnings`.
 
 ## Scripts
