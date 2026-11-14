@@ -1,0 +1,15 @@
+/.next/
+out/
+node_modules/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+.vercel
+private-key.pem
+public-key.pem
+.midtrans.access-keys
+.demo-accounts
