@@ -115,7 +115,7 @@ describe("schema structure", () => {
     expect(r.rows.filter((v) => !v.invoker)).toEqual([]);
   });
 
-  it("seeds the Tarakan universities without email domains", async () => {
+  it("seeds the Tarakan universities; only STMIK PPKIA has a confirmed student domain", async () => {
     const r = await db.query<{ name: string; email_domains: string[] }>(
       "select name, email_domains from public.universities order by name",
     );
@@ -123,7 +123,11 @@ describe("schema structure", () => {
       "STMIK PPKIA Tarakanita Rahmawati",
       "Universitas Borneo Tarakan",
     ]);
-    expect(r.rows.every((u) => u.email_domains.length === 0)).toBe(true);
+    // 20261114030000: confirmed by the product owner; UBT stays unset.
+    expect(r.rows.map((u) => u.email_domains)).toEqual([
+      ["student.ppkia.ac.id"],
+      [],
+    ]);
   });
 
   it("shows only active universities to anon", async () => {

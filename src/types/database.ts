@@ -1215,6 +1215,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_university_domains: {
+        Args: { p_domains: string[]; p_university_id: string }
+        Returns: {
+          created_at: string
+          email_domains: string[]
+          id: string
+          is_active: boolean
+          name: string
+          short_name: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "universities"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_payment_status: {
         Args: {
           p_fraud_status: string
