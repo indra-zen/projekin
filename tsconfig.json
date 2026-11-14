@@ -29,7 +29,9 @@
     "next-env.d.ts",
     ".next/dev/types/**/*.ts",
     "tests/**/*.ts",
-    "vitest.config.mts"
+    "e2e/**/*.ts",
+    "vitest.config.mts",
+    "playwright.config.ts"
   ],
   "exclude": ["node_modules"]
 }

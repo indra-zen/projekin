@@ -4,7 +4,7 @@ Student-powered freelance marketplace. Only verified university students can wor
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui · Supabase (Postgres, Auth, Storage, RLS) · Vitest + PGlite · Midtrans Snap Sandbox
+Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui · Supabase (Postgres, Auth, Storage, RLS) · Vitest + PGlite · Playwright · Midtrans Snap Sandbox
 
 ## Setup
 
@@ -97,8 +97,24 @@ Next.js 16 (App Router) · TypeScript (strict) · Tailwind CSS v4 · shadcn/ui �
 | `npm test` | All tests (unit + database) |
 | `npm run test:unit` | Unit tests (`tests/unit`) |
 | `npm run test:db` | Database tests: applies `supabase/migrations` to an in-memory Postgres (PGlite) and checks RLS, grants, RPCs and storage policies |
+| `npm run test:e2e` | Browser tests with Playwright (`e2e/`), see below |
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and build, and applies the migrations to a real Supabase stack.
+
+### Browser tests (Playwright)
+
+The suite in `e2e/` opens the real app in Chromium: public pages, search, the 404 page, security headers, login redirects, every dashboard and admin page for each role, an order detail page, and phone-width layouts. Any browser error or console error (including CSP reports) fails the test. The tests **only read**: they sign in and open pages but never submit, upload or pay, because local development and production share one Supabase project.
+
+```bash
+npx playwright install chromium        # once
+npm run build && npm run test:e2e      # starts `next start` on :3100
+E2E_BASE_URL=https://projekin.vercel.app npm run test:e2e   # the deployed site
+npx playwright test --ui               # watch the tests run
+```
+
+Signed-in tests use the demo accounts from `.demo-accounts` (git-ignored, one `role email password` line per account; the client role is `klien`) or the `E2E_{CLIENT,FREELANCER,ADMIN}_{EMAIL,PASSWORD}` environment variables. Tests for a role without credentials are skipped.
+
+`.github/workflows/e2e.yml` runs the suite against `https://projekin.vercel.app` after each successful Vercel production deployment, and on demand (Actions → E2E → Run workflow). For the signed-in tests, add the six `E2E_…` values above as repository secrets (Settings → Secrets and variables → Actions).
 
 ## Contributing
 
