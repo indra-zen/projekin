@@ -2,10 +2,12 @@ name: E2E
 
 # Read-only browser tests (e2e/) against the deployed site: after every
 # successful Vercel production deployment, and on demand from the Actions tab.
+# Vercel reports deployments as commit statuses (context "Vercel"), not as
+# GitHub deployments, so the trigger is `status` on commits that are main's head.
 # Signed-in tests need the demo-account secrets below; without them they are
 # skipped and only the public tests run.
 on:
-  deployment_status:
+  status:
   workflow_dispatch:
     inputs:
       base_url:
@@ -16,19 +18,20 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: e2e
-  cancel-in-progress: true
-
 jobs:
   e2e:
     name: Playwright against the deployed site
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.deployment_status.state == 'success' &&
-       github.event.deployment.environment == 'Production')
+      (github.event.context == 'Vercel' &&
+       github.event.state == 'success' &&
+       contains(github.event.branches.*.name, 'main'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Job-level, so skipped runs (other statuses) never cancel a real one.
+    concurrency:
+      group: e2e
+      cancel-in-progress: false
     env:
       E2E_BASE_URL: ${{ inputs.base_url || 'https://projekin.vercel.app' }}
       E2E_CLIENT_EMAIL: ${{ secrets.E2E_CLIENT_EMAIL }}
@@ -39,6 +42,9 @@ jobs:
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The deployed commit (a `status` run otherwise checks out main).
+          ref: ${{ github.event.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24

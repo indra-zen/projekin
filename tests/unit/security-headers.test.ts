@@ -58,7 +58,24 @@ describe("Content-Security-Policy (ARCHITECTURE §12.1, Phase 10)", () => {
 
   it("uses the Supabase origin only, never a path", () => {
     const policy = contentSecurityPolicy();
-    expect(policy).toMatch(/img-src 'self' data: blob: https:\/\/\S+/);
-    expect(policy).not.toMatch(/supabase\.co\//);
+    const img = directives(policy).get("img-src") ?? [];
+    const origin = img.at(-1) ?? "";
+    // From NEXT_PUBLIC_SUPABASE_URL (https in production, http://127.0.0.1 in
+    // CI) or the *.supabase.co fallback; either way an origin, not a URL.
+    expect(origin).toMatch(/^https?:\/\/[^/\s]+$/);
+    expect(directives(policy).get("connect-src")).toContain(origin);
+  });
+
+  it("strips the path from NEXT_PUBLIC_SUPABASE_URL", () => {
+    const saved = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321/rest/v1/";
+    try {
+      expect(directives(contentSecurityPolicy()).get("img-src")).toContain(
+        "http://127.0.0.1:54321",
+      );
+    } finally {
+      if (saved === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      else process.env.NEXT_PUBLIC_SUPABASE_URL = saved;
+    }
   });
 });

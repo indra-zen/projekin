@@ -116,6 +116,18 @@ Signed-in tests use the demo accounts from `.demo-accounts` (git-ignored, one `r
 
 `.github/workflows/e2e.yml` runs the suite against `https://projekin.vercel.app` after each successful Vercel production deployment, and on demand (Actions → E2E → Run workflow). For the signed-in tests, add the six `E2E_…` values above as repository secrets (Settings → Secrets and variables → Actions).
 
+### Demo data
+
+`scripts/seed-demo/` replaces **all** data in the Supabase project from `.env.local` with a two-month demo history: 2 admins, 6 verified student freelancers, 1 pending and 1 rejected applicant, 6 clients; 17 services with covers, 12 portfolio items, 8 jobs with proposals, and 24 orders in every state (awaiting payment, in progress, delivered, completed with reviews and payouts, cancelled, disputed, refunded). All names are fictional and every e-mail uses `example.com`.
+
+```bash
+node scripts/seed-demo/seed.mjs --dry-run              # in-memory Postgres with the real migrations; writes nothing
+node scripts/seed-demo/seed.mjs --dry-run --out /tmp/x # also renders every image and PDF for a visual check
+node scripts/seed-demo/seed.mjs --remote --wipe        # DELETES every account, row and file, then seeds
+```
+
+The data goes through the app's own database functions as each user, so every business rule applies; only Midtrans is simulated (paid orders receive a `settlement` status). The run aborts and rolls back if any timestamp is in the future or any story is out of order. The remote run needs the linked Supabase CLI and `SUPABASE_SECRET_KEY`, keeps universities and categories, and writes the new logins (one shared password; set `DEMO_PASSWORD` to choose it) to `.demo-accounts`. Production shares this database, so run it only when you mean to reset the live demo. The two unpaid orders expire 24 hours after the run (the cron cancels them), as real ones would.
+
 ## Contributing
 
 Read [`CLAUDE.md`](CLAUDE.md) and [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) before starting work.
