@@ -30,10 +30,10 @@ export function ReviewForms({
   return (
     <div className="space-y-6">
       <FormAlert state={state} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-x-6 gap-y-8 lg:grid-cols-2">
         <form
           action={action}
-          className="space-y-4 rounded-2xl border p-5"
+          className="bg-card border-border shadow-ledge space-y-4 rounded-2xl border-2 p-5 [--ledge:var(--success)]"
           noValidate
         >
           <h3 className="font-bold">Setujui</h3>
@@ -62,7 +62,7 @@ export function ReviewForms({
 
         <form
           action={action}
-          className="space-y-4 rounded-2xl border p-5"
+          className="bg-card border-border shadow-ledge space-y-4 rounded-2xl border-2 p-5 [--ledge:var(--accent)]"
           noValidate
         >
           <h3 className="font-bold">Tolak</h3>

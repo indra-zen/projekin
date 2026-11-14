@@ -5,7 +5,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   // Non-admins get 404. Every admin action is also re-checked inside its RPC.
   await requireAdmin();
   return (
-    <div className="container space-y-8 py-8 md:py-12">
+    <div className="container space-y-6 py-8 md:py-12">
       <AdminNav />
       {children}
     </div>

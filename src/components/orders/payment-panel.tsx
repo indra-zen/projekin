@@ -188,7 +188,7 @@ export function PaymentPanel({
   return (
     <div className="space-y-3">
       {error ? (
-        <Alert variant="destructive" className="border-destructive/30">
+        <Alert variant="destructive">
           <AlertCircle />
           <AlertDescription>{error}</AlertDescription>
         </Alert>

@@ -40,7 +40,7 @@ export default async function FreelancerProfilePage() {
       </div>
 
       {!freelancer ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Belum menjadi freelancer</CardTitle>
             <CardDescription>
@@ -58,7 +58,7 @@ export default async function FreelancerProfilePage() {
         </Card>
       ) : (
         <>
-          <Card className="rounded-2xl">
+          <Card>
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
                 {freelancer.university?.name}{" "}
@@ -71,7 +71,7 @@ export default async function FreelancerProfilePage() {
               </CardDescription>
             </CardHeader>
           </Card>
-          <Card className="rounded-2xl">
+          <Card>
             <CardHeader>
               <CardTitle className="text-lg">Detail freelancer</CardTitle>
             </CardHeader>

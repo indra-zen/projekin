@@ -1,4 +1,4 @@
-/** Shared layout for the Terms and Privacy pages. */
+/** Shared layout for the Terms and Privacy pages. Readability first. */
 export function LegalPage({
   title,
   updated,
@@ -9,27 +9,35 @@ export function LegalPage({
   sections: { heading: string; body: string[] }[];
 }) {
   return (
-    <div className="container max-w-3xl py-12 md:py-16">
-      <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
+    <div className="container max-w-3xl py-10 md:py-16">
+      <span className="eyebrow">Informasi hukum</span>
+      <h1 className="mt-4 text-3xl font-extrabold tracking-tight md:text-4xl">
+        {title}
+      </h1>
       <p className="text-muted-foreground mt-2 text-sm">
         Terakhir diperbarui {updated}
       </p>
-      <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+      <div
+        role="note"
+        className="bg-highlight border-border mt-6 rounded-xl border-2 p-4 text-sm leading-6 font-medium"
+      >
         Projekin adalah proyek tugas kuliah. Pembayaran memakai Midtrans Sandbox
         (mode uji), sehingga tidak ada uang sungguhan yang berpindah.
       </div>
-      <div className="mt-8 space-y-8">
+      <article className="bg-card border-border shadow-ledge divide-hairline mt-8 divide-y rounded-2xl border-2 px-5 md:px-10">
         {sections.map((section) => (
-          <section key={section.heading}>
-            <h2 className="text-xl font-bold">{section.heading}</h2>
-            <div className="text-muted-foreground mt-3 space-y-3 leading-7">
+          <section key={section.heading} className="py-7 first:pt-8 last:pb-9">
+            <h2 className="text-2xl font-bold tracking-tight">
+              {section.heading}
+            </h2>
+            <div className="mt-3 max-w-[68ch] space-y-3 leading-7">
               {section.body.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
               ))}
             </div>
           </section>
         ))}
-      </div>
+      </article>
     </div>
   );
 }

@@ -41,10 +41,8 @@ export default async function AdminDisputesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Sengketa pesanan
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -53,7 +51,7 @@ export default async function AdminDisputesPage() {
         </p>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">
             Menunggu keputusan ({open?.length ?? 0})
@@ -61,13 +59,13 @@ export default async function AdminDisputesPage() {
         </CardHeader>
         <CardContent>
           {open && open.length > 0 ? (
-            <ul className="divide-y">
+            <ul className="divide-hairline divide-y">
               {open.map((d) => (
                 <li key={d.id} className="grid gap-4 py-5 lg:grid-cols-2">
                   <div className="min-w-0 space-y-2 text-sm">
                     <Link
                       href={`/dashboard/orders/${d.order_id}` as Route}
-                      className="text-primary font-semibold hover:underline"
+                      className="text-primary font-bold underline-offset-4 hover:underline"
                     >
                       {d.order
                         ? formatOrderCode(d.order.order_number)
@@ -83,7 +81,7 @@ export default async function AdminDisputesPage() {
                       Dibuka oleh {name(d.opener)} ·{" "}
                       {formatDateTime(d.created_at)}
                     </p>
-                    <p className="bg-muted/50 rounded-lg p-3 break-words whitespace-pre-wrap">
+                    <p className="bg-muted border-border rounded-xl border-2 p-3 break-words whitespace-pre-wrap">
                       {d.reason}
                     </p>
                   </div>
@@ -100,17 +98,17 @@ export default async function AdminDisputesPage() {
       </Card>
 
       {resolved && resolved.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Keputusan terbaru</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y text-sm">
+            <ul className="divide-hairline divide-y text-sm">
               {resolved.map((d) => (
                 <li key={d.id} className="space-y-1 py-3">
                   <Link
                     href={`/dashboard/orders/${d.order_id}` as Route}
-                    className="font-semibold hover:underline"
+                    className="font-bold underline-offset-4 hover:underline"
                   >
                     {d.order
                       ? formatOrderCode(d.order.order_number)

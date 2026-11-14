@@ -38,15 +38,13 @@ export default async function AdminVerificationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Verifikasi mahasiswa
         </h1>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">
             Menunggu peninjauan ({pending?.length ?? 0})
@@ -54,15 +52,15 @@ export default async function AdminVerificationsPage() {
         </CardHeader>
         <CardContent>
           {pending && pending.length > 0 ? (
-            <ul className="divide-y">
+            <ul className="divide-hairline divide-y">
               {pending.map((item) => (
                 <li key={item.id}>
                   <Link
                     href={`/admin/verifications/${item.id}`}
-                    className="hover:bg-muted/50 -mx-3 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
+                    className="hover:bg-highlight/30 -mx-3 flex items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-semibold">
+                      <span className="block truncate font-bold">
                         {item.profile?.full_name}{" "}
                         <span className="text-muted-foreground font-normal">
                           @{item.profile?.username}
@@ -86,13 +84,13 @@ export default async function AdminVerificationsPage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Keputusan terbaru</CardTitle>
         </CardHeader>
         <CardContent>
           {recent && recent.length > 0 ? (
-            <ul className="divide-y text-sm">
+            <ul className="divide-hairline divide-y text-sm">
               {recent.map((item) => (
                 <li
                   key={item.id}

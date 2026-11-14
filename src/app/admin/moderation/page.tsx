@@ -27,10 +27,8 @@ export default async function ModerationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Moderasi marketplace
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -42,7 +40,7 @@ export default async function ModerationPage() {
           <CardTitle>Freelancer</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="divide-y">
+          <div className="divide-hairline divide-y">
             {freelancers?.map((item) => (
               <div
                 key={item.user_id}
@@ -71,7 +69,7 @@ export default async function ModerationPage() {
           <CardTitle>Layanan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="divide-y">
+          <div className="divide-hairline divide-y">
             {services?.map((item) => (
               <div key={item.id} className="space-y-3 py-4">
                 <div>

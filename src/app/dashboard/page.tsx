@@ -78,23 +78,22 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-4">
         <UserAvatar
           path={profile.avatar_path}
           name={profile.full_name}
           username={profile.username}
-          className="size-14"
+          className="shadow-hard-sm size-14 shrink-0 sm:size-16"
+          fallbackClassName="text-lg"
         />
         <div className="min-w-0">
-          <p className="text-primary text-sm font-bold tracking-widest uppercase">
-            Ruang kerja Anda
-          </p>
-          <h1 className="mt-1 truncate text-3xl font-extrabold tracking-tight">
+          <span className="eyebrow">Ruang kerja Anda</span>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight break-words sm:text-3xl">
             Halo, {profile.full_name}
           </h1>
           <Link
             href={`/u/${profile.username}`}
-            className="text-muted-foreground text-sm hover:underline"
+            className="text-muted-foreground text-sm font-medium underline-offset-4 hover:underline"
           >
             @{profile.username} · lihat profil publik
           </Link>
@@ -103,48 +102,52 @@ export default async function DashboardPage() {
 
       <section
         aria-label="Ringkasan aktivitas"
-        className="grid gap-3 sm:grid-cols-3"
+        className="grid gap-4 sm:grid-cols-3"
       >
         <Link
           href="/dashboard/orders"
-          className="bg-card rounded-2xl border p-4 transition-shadow hover:shadow-sm"
+          className="group border-border shadow-hard bg-highlight block rounded-2xl border-2 p-4 transition-transform motion-safe:hover:-translate-y-0.5"
         >
-          <p className="text-muted-foreground text-sm">
-            Pesanan klien perlu perhatian
+          <p className="text-sm font-bold">Pesanan klien perlu perhatian</p>
+          <p className="font-display mt-1 text-4xl font-extrabold tabular-nums">
+            {clientOrders ?? 0}
           </p>
-          <p className="mt-1 text-2xl font-bold">{clientOrders ?? 0}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs font-medium">
             Pembayaran, pengiriman, atau sengketa
           </p>
         </Link>
         <Link
           href="/dashboard/orders?role=freelancer"
-          className="bg-card rounded-2xl border p-4 transition-shadow hover:shadow-sm"
+          className="group border-border shadow-hard bg-success block rounded-2xl border-2 p-4 transition-transform motion-safe:hover:-translate-y-0.5"
         >
-          <p className="text-muted-foreground text-sm">Pekerjaan aktif</p>
-          <p className="mt-1 text-2xl font-bold">{freelancerOrders ?? 0}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-sm font-bold">Pekerjaan aktif</p>
+          <p className="font-display mt-1 text-4xl font-extrabold tabular-nums">
+            {freelancerOrders ?? 0}
+          </p>
+          <p className="mt-1 text-xs font-medium">
             Dikerjakan atau dalam sengketa
           </p>
         </Link>
         <Link
           href="/dashboard/orders?status=delivered"
-          className="border-primary/30 bg-primary/5 rounded-2xl border p-4 transition-shadow hover:shadow-sm"
+          className="group border-border shadow-hard bg-accent block rounded-2xl border-2 p-4 transition-transform motion-safe:hover:-translate-y-0.5"
         >
-          <p className="text-primary text-sm font-semibold">
-            Notifikasi penting
+          <p className="text-sm font-bold">Notifikasi penting</p>
+          <p className="font-display mt-1 text-4xl font-extrabold tabular-nums">
+            {pendingActions ?? 0}
           </p>
-          <p className="mt-1 text-2xl font-bold">{pendingActions ?? 0}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs font-medium">
             Hasil kerja menunggu konfirmasi
           </p>
         </Link>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl">
+      <div className="grid gap-x-5 gap-y-8 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <ShoppingBag className="text-primary size-5" />
+            <span className="bg-secondary border-border shadow-hard-sm mb-2 flex size-10 items-center justify-center rounded-xl border-2">
+              <ShoppingBag className="size-5" aria-hidden />
+            </span>
             <CardTitle className="text-lg">Sebagai klien</CardTitle>
             <CardDescription>
               Setiap akun dapat memesan jasa dan memposting pekerjaan.
@@ -172,9 +175,11 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl">
+        <Card className="[--ledge:var(--success)]">
           <CardHeader>
-            <BriefcaseBusiness className="text-primary size-5" />
+            <span className="bg-success border-border shadow-hard-sm mb-2 flex size-10 items-center justify-center rounded-xl border-2">
+              <BriefcaseBusiness className="size-5" aria-hidden />
+            </span>
             <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
               Sebagai freelancer <VerificationBadge state={state} />
             </CardTitle>
@@ -218,7 +223,7 @@ export default async function DashboardPage() {
       </div>
 
       {caps.canReviewVerifications ? (
-        <Card className="rounded-2xl">
+        <Card className="[--ledge:var(--primary)]">
           <CardHeader>
             <CardTitle className="text-lg">Admin</CardTitle>
             <CardDescription>

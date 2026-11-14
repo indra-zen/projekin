@@ -43,7 +43,8 @@ export default async function OrderServicePage({
         <ArrowLeft className="size-4" /> Kembali ke layanan
       </Link>
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Pesanan baru</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Pesan layanan
         </h1>
         <p className="text-muted-foreground mt-2 break-words">
@@ -51,7 +52,7 @@ export default async function OrderServicePage({
         </p>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Ringkasan</CardTitle>
         </CardHeader>
@@ -70,7 +71,7 @@ export default async function OrderServicePage({
           ) : null}
           <dl className="grid grid-cols-[1fr_auto] gap-y-2">
             <dt className="text-muted-foreground">Harga</dt>
-            <dd className="text-lg font-extrabold">
+            <dd className="font-display text-xl font-extrabold">
               {formatIdr(service.price)}
             </dd>
             <dt className="text-muted-foreground">Pengerjaan</dt>
@@ -78,7 +79,7 @@ export default async function OrderServicePage({
             <dt className="text-muted-foreground">Revisi</dt>
             <dd>{service.revisions_included} kali</dd>
           </dl>
-          <p className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-amber-900">
+          <p className="bg-highlight border-border flex items-start gap-2 rounded-xl border-2 p-3 font-medium">
             <Clock className="mt-0.5 size-4 shrink-0" />
             Selesaikan pembayaran dalam 24 jam setelah pesanan dibuat. Pesanan
             yang tidak dibayar dibatalkan otomatis. Harga dihitung dari data
@@ -88,11 +89,11 @@ export default async function OrderServicePage({
       </Card>
 
       {own ? (
-        <div className="bg-muted/40 rounded-2xl border border-dashed p-6 text-sm">
+        <div className="border-border bg-card/60 rounded-2xl border-2 border-dashed p-6 text-sm font-medium">
           Ini layanan Anda sendiri, jadi tidak dapat dipesan.
         </div>
       ) : !orderable ? (
-        <div className="bg-muted/40 rounded-2xl border border-dashed p-6 text-sm">
+        <div className="border-border bg-card/60 rounded-2xl border-2 border-dashed p-6 text-sm font-medium">
           Layanan ini sedang tidak dapat dipesan.{" "}
           <Link
             href="/services"
@@ -102,7 +103,7 @@ export default async function OrderServicePage({
           </Link>
         </div>
       ) : (
-        <Card className="rounded-2xl">
+        <Card className="[--ledge:var(--primary)]">
           <CardContent>
             <ServiceOrderForm
               serviceId={service.id}

@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/*
+ * Neo-Brutalism design system. Source of truth: docs/DESIGN_SYSTEM.md.
+ * Light theme only: `dark:` utilities are tied to a `.dark` class that is
+ * never set, so they stay inert even when the OS prefers a dark scheme.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -18,36 +25,116 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-plus-jakarta);
+  --color-lilac: var(--lilac);
+  --color-highlight: var(--highlight);
+  --color-success: var(--success);
+  --color-danger-soft: var(--danger-soft);
+  --color-hairline: var(--hairline);
+
+  --font-sans:
+    var(--font-plus-jakarta), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-plus-jakarta), ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* Hard (unblurred) shadows. Cards use the ledge; controls use the diagonal. */
+  --shadow-hard-sm: 2px 2px 0 0 var(--foreground);
+  --shadow-hard: 4px 4px 0 0 var(--foreground);
+  --shadow-hard-lg: 6px 6px 0 0 var(--foreground);
+  --shadow-ledge:
+    0 5px 0 0 var(--ledge, var(--highlight)), 0 7px 0 0 var(--foreground);
 }
 
 :root {
-  --background: #fcfcfb;
-  --foreground: #17211c;
-  --card: #ffffff;
-  --card-foreground: #17211c;
-  --primary: #087f5b;
+  --background: #f1ecf8;
+  --foreground: #17130f;
+  --card: #fffefa;
+  --card-foreground: #17130f;
+  --primary: #7b4fb8;
   --primary-foreground: #ffffff;
-  --secondary: #e8f4ef;
-  --secondary-foreground: #075c43;
-  --muted: #f1f5f2;
-  --muted-foreground: #607068;
-  --accent: #e8f4ef;
-  --accent-foreground: #075c43;
-  --destructive: #c62828;
+  --secondary: #ffb86b;
+  --secondary-foreground: #17130f;
+  --muted: #e9e1f4;
+  --muted-foreground: #5e5569;
+  --accent: #f56b9a;
+  --accent-foreground: #17130f;
+  --destructive: #c4253f;
   --destructive-foreground: #ffffff;
-  --border: #dce7e1;
-  --input: #cfdcd5;
-  --ring: #66b69d;
+  --border: #17130f;
+  --input: #17130f;
+  --ring: #7b4fb8;
+
+  /* Additions (docs/DESIGN_SYSTEM.md §2). */
+  --lilac: #9165c7;
+  --highlight: #ffe27a;
+  --success: #c9f2c7;
+  --danger-soft: #ffd6e2;
+  --hairline: rgb(23 19 15 / 0.14);
+
+  color-scheme: light;
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+  h1,
+  h2 {
+    @apply font-display;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Native checkbox and radio: ink box, primary fill when checked. */
+  input[type="checkbox"],
+  input[type="radio"] {
+    appearance: none;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border);
+    background-color: var(--card);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    cursor: pointer;
+  }
+  input[type="checkbox"] {
+    border-radius: 0.375rem;
+  }
+  input[type="radio"] {
+    border-radius: 9999px;
+  }
+  input[type="checkbox"]:checked {
+    background-color: var(--primary);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+  }
+  input[type="radio"]:checked {
+    background-color: var(--card);
+    background-image: radial-gradient(
+      circle,
+      var(--primary) 0 45%,
+      transparent 50%
+    );
+  }
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 }
-body {
-  background: var(--background);
-  color: var(--foreground);
-}
+
 .container {
   width: min(100% - 2rem, 1180px);
   margin-inline: auto;
@@ -55,5 +142,59 @@ body {
 @media (min-width: 640px) {
   .container {
     width: min(100% - 4rem, 1180px);
+  }
+}
+
+/* Uppercase sticker label above page titles. */
+@utility eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 2px solid var(--border);
+  border-radius: 9999px;
+  background-color: var(--highlight);
+  padding: 0.25rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Small outlined chip; pick the fill with a bg-* class. */
+@utility sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 2px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  font-weight: 700;
+}
+
+/* Highlighter underline behind the lower part of a word. */
+@utility marker {
+  background-image: linear-gradient(
+    transparent 58%,
+    var(--highlight) 58% 94%,
+    transparent 94%
+  );
+  padding-inline: 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

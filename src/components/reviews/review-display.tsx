@@ -26,7 +26,7 @@ export function RatingSummary({
         className,
       )}
     >
-      <Star className="size-4 fill-current text-amber-500" aria-hidden />
+      <Star className="fill-highlight text-foreground size-4" aria-hidden />
       <span className="sr-only">Rating rata-rata</span>
       <span className="text-foreground font-semibold">{value}</span>
       <span>({count} ulasan)</span>
@@ -47,7 +47,10 @@ export function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {reviews.map((review) => (
-        <li key={review.id} className="bg-muted/50 min-w-0 rounded-xl p-4">
+        <li
+          key={review.id}
+          className="bg-card border-border min-w-0 rounded-xl border-2 p-4"
+        >
           <div className="flex items-center justify-between gap-2 text-sm">
             <span className="min-w-0 truncate font-semibold">
               {review.reviewer?.full_name ??
@@ -56,12 +59,11 @@ export function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
             <span
               role="img"
               aria-label={`${review.rating} dari 5 bintang`}
-              className="shrink-0 text-amber-600"
+              className="text-foreground shrink-0"
             >
               {"★".repeat(review.rating)}
-              <span className="text-muted-foreground/40">
-                {"★".repeat(Math.max(0, 5 - review.rating))}
-              </span>
+              {/* Empty stars differ by shape, not by a faint colour. */}
+              {"☆".repeat(Math.max(0, 5 - review.rating))}
             </span>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">

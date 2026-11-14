@@ -37,10 +37,8 @@ export default async function AdminPayoutsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Pencairan freelancer
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -49,7 +47,7 @@ export default async function AdminPayoutsPage() {
         </p>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">
             Menunggu dibayar ({pending?.length ?? 0})
@@ -57,13 +55,13 @@ export default async function AdminPayoutsPage() {
         </CardHeader>
         <CardContent>
           {pending && pending.length > 0 ? (
-            <ul className="divide-y">
+            <ul className="divide-hairline divide-y">
               {pending.map((o) => (
                 <li key={o.id} className="grid gap-4 py-5 lg:grid-cols-2">
                   <div className="min-w-0 space-y-1 text-sm">
                     <Link
                       href={`/dashboard/orders/${o.id}` as Route}
-                      className="text-primary font-semibold hover:underline"
+                      className="text-primary font-bold underline-offset-4 hover:underline"
                     >
                       {formatOrderCode(o.order_number)} · {o.title}
                     </Link>
@@ -94,12 +92,12 @@ export default async function AdminPayoutsPage() {
       </Card>
 
       {paid && paid.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Sudah dibayar</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y text-sm">
+            <ul className="divide-hairline divide-y text-sm">
               {paid.map((o) => (
                 <li
                   key={o.id}

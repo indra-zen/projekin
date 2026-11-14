@@ -9,15 +9,13 @@ import {
   fieldValue,
 } from "@/components/forms/form-primitives";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   markPayoutPaidAction,
   markRefundCompletedAction,
   resolveDisputeAction,
 } from "@/server/actions/admin-money";
-
-const selectClass =
-  "border-input h-10 w-full rounded-md border bg-transparent px-3 text-sm";
 
 /** FR-ADM-04: release to the freelancer or refund the client, with a note. */
 export function ResolveDisputeForm({
@@ -39,11 +37,10 @@ export function ResolveDisputeForm({
         htmlFor={`resolution-${disputeId}`}
         error={fieldError(state, "resolution")}
       >
-        <select
+        <NativeSelect
           id={`resolution-${disputeId}`}
           name="resolution"
           defaultValue={fieldValue(state, "resolution") || ""}
-          className={selectClass}
         >
           <option value="" disabled>
             Pilih keputusan…
@@ -54,7 +51,7 @@ export function ResolveDisputeForm({
           <option value="refund_client">
             Kembalikan dana ke klien (pesanan dibatalkan)
           </option>
-        </select>
+        </NativeSelect>
       </Field>
       <Field
         label="Catatan admin"

@@ -66,7 +66,7 @@ export default async function AdminVerificationDetailPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Data pengajuan</CardTitle>
           </CardHeader>
@@ -116,7 +116,7 @@ export default async function AdminVerificationDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Dokumen KTM</CardTitle>
           </CardHeader>
@@ -128,7 +128,7 @@ export default async function AdminVerificationDetailPage({
                   <img
                     src={documentUrl}
                     alt="Dokumen KTM"
-                    className="max-h-[480px] w-full rounded-xl border object-contain"
+                    className="border-border max-h-[480px] w-full rounded-xl border-2 object-contain"
                   />
                 )}
                 <a
@@ -160,7 +160,7 @@ export default async function AdminVerificationDetailPage({
             Anda tidak dapat meninjau pengajuan milik sendiri.
           </p>
         ) : (
-          <Card className="rounded-2xl">
+          <Card>
             <CardHeader>
               <CardTitle className="text-lg">Keputusan</CardTitle>
             </CardHeader>

@@ -79,7 +79,7 @@ export default async function ManageJobPage({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Link
         href="/dashboard/jobs"
         className="text-muted-foreground inline-flex items-center gap-1 text-sm hover:underline"
@@ -90,22 +90,30 @@ export default async function ManageJobPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-primary text-xs font-bold tracking-widest uppercase">
-              {job.category?.name}
-            </span>
+            {job.category?.name ? (
+              <span className="sticker bg-highlight">{job.category.name}</span>
+            ) : null}
             <StatusBadge
               status={job.status}
               label={jobStatusLabels[job.status]}
             />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight break-words">
+          <h1 className="text-3xl leading-tight font-extrabold tracking-tight text-balance break-words">
             {job.title}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            {formatBudgetRange(job.budget_min, job.budget_max)} · diposting{" "}
-            {formatDate(job.created_at)}
-            {job.deadline ? ` · tenggat ${formatDate(job.deadline)}` : ""}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="sticker bg-success">
+              {formatBudgetRange(job.budget_min, job.budget_max)}
+            </span>
+            {job.deadline ? (
+              <span className="sticker bg-secondary">
+                Tenggat {formatDate(job.deadline)}
+              </span>
+            ) : null}
+            <span className="text-muted-foreground">
+              Diposting {formatDate(job.created_at)}
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
@@ -122,7 +130,7 @@ export default async function ManageJobPage({
       </div>
 
       {liveOrder ? (
-        <Card className="border-primary/30 rounded-2xl">
+        <Card className="[--ledge:var(--primary)]">
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm">
               Pesanan <strong>{formatOrderCode(liveOrder.order_number)}</strong>
@@ -154,7 +162,7 @@ export default async function ManageJobPage({
         </p>
       ) : null}
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">
             Proposal ({proposals?.length ?? 0})
@@ -171,7 +179,10 @@ export default async function ManageJobPage({
                 const overBudget =
                   p.price < job.budget_min || p.price > job.budget_max;
                 return (
-                  <li key={p.id} className="rounded-2xl border p-4 sm:p-5">
+                  <li
+                    key={p.id}
+                    className="bg-card border-border shadow-hard-sm rounded-2xl border-2 p-4 sm:p-5"
+                  >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 items-center gap-3">
                         {profile ? (
@@ -185,7 +196,7 @@ export default async function ManageJobPage({
                           {profile ? (
                             <Link
                               href={`/u/${profile.username}` as Route}
-                              className="block truncate font-semibold hover:underline"
+                              className="block truncate font-bold underline-offset-4 hover:underline"
                             >
                               {name}
                             </Link>
@@ -224,11 +235,13 @@ export default async function ManageJobPage({
                       />
                     </div>
                     <p className="mt-3 text-sm">
-                      <strong>{formatIdr(p.price)}</strong> · {p.delivery_days}{" "}
-                      hari · {p.revisions_included} revisi
+                      <strong className="font-display text-base font-extrabold">
+                        {formatIdr(p.price)}
+                      </strong>{" "}
+                      · {p.delivery_days} hari · {p.revisions_included} revisi
                       {overBudget ? (
-                        <span className="ml-2 text-xs text-amber-700">
-                          (di luar anggaran)
+                        <span className="sticker bg-highlight ml-2">
+                          di luar anggaran
                         </span>
                       ) : null}
                     </p>
@@ -255,7 +268,7 @@ export default async function ManageJobPage({
               })}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-sm">
+            <p className="border-border bg-muted/40 rounded-xl border-2 border-dashed p-6 text-center text-sm font-medium">
               Belum ada proposal masuk.
             </p>
           )}
