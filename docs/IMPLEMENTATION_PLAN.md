@@ -32,6 +32,7 @@
 - **Webhook needs a public URL.** Until the Midtrans Notification URL points at the deployed site, orders update through return-sync and the daily reconcile cron.
 - **`SUPABASE_SECRET_KEY` on dev is the legacy `service_role` JWT.** Switch to an `sb_secret_` key from the dashboard when convenient; no code change is needed.
 - **Race-condition tests are sequential.** PGlite has a single connection, so concurrency is tested through the unique-index backstops, not truly parallel transactions.
+- **CI has not run yet.** The branch could not be pushed from the agent shell (no GitHub credentials there). The first run comes with the pull request, including the job that applies all migrations to a real Supabase stack.
 - **Database tests use PGlite plus a Supabase shim.** CI's `migrations` job applies every migration to a real Supabase stack. Playwright E2E is not part of CI (the live run above used an ad-hoc script).
 - **Email links opened on another device** need the token-hash email templates (README step 4). Supabase's built-in email sender is heavily rate-limited (PRD A5).
 - **`npm audit`:** 7 moderate advisories in the dev-only ESLint chain. Production dependencies: 0.
@@ -41,12 +42,13 @@
 
 ### 0.2 Next steps (2026-11-14)
 
-1. **Deploy** (ARCHITECTURE §14, README). The Supabase project stays `projekin-dev` (product-owner decision), so no migration push is needed.
+1. **Push and merge:** `git push -u origin feature/auth-profiles`, open a pull request into `main`, and merge once both CI jobs are green (`main` has no commits the branch lacks, so there are no conflicts).
+2. **Deploy** (ARCHITECTURE §14, README). The Supabase project stays `projekin-dev` (product-owner decision), so no migration push is needed.
    - Vercel: import the repo (production branch `main`), set the env vars from ARCHITECTURE §4.1 with `NEXT_PUBLIC_SITE_URL` = the Vercel URL, and set `CRON_SECRET`.
    - Supabase dashboard → Auth → URL configuration: site URL = the Vercel URL; add `https://<domain>/auth/confirm` to the redirect URLs. Optionally turn on "Secure password change".
    - Midtrans Sandbox dashboard → Notification URL: `https://<domain>/api/payments/midtrans/notification`.
-2. **Smoke test on the deployed site** with the demo accounts: one Snap payment (the webhook should move the order without pressing "Periksa status pembayaran"), then a quick look at `/admin`.
-3. **Later (Phase 10):** full CSP, Playwright E2E in CI. Rules for new migrations: a unique version later than `20261114020000`; `revoke all … from anon, authenticated` before granting; database tests first; an Indonesian message for every new reason; regenerate `src/types/database.ts` after each push.
+3. **Smoke test on the deployed site** with the demo accounts: one Snap payment (the webhook should move the order without pressing "Periksa status pembayaran"), then a quick look at `/admin`.
+4. **Later (Phase 10):** full CSP, Playwright E2E in CI. Rules for new migrations: a unique version later than `20261114020000`; `revoke all … from anon, authenticated` before granting; database tests first; an Indonesian message for every new reason; regenerate `src/types/database.ts` after each push.
 
 ---
 
