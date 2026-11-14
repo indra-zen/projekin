@@ -1,5 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { FileText } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/jobs/status-badge";
 import { WithdrawProposalButton } from "@/components/jobs/withdraw-proposal-button";
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,7 @@ export default async function MyProposalsPage() {
         </Button>
       </div>
       {proposals && proposals.length > 0 ? (
-        <ul className="bg-card divide-y rounded-2xl border">
+        <ul className="bg-card divide-hairline shadow-ledge divide-y rounded-2xl border-2">
           {proposals.map((p) => {
             const orderId = orderByProposal.get(p.id);
             return (
@@ -56,7 +58,7 @@ export default async function MyProposalsPage() {
                   <div className="min-w-0">
                     <Link
                       href={`/jobs/${p.job_id}` as Route}
-                      className="block truncate font-semibold hover:underline"
+                      className="block truncate font-bold underline-offset-4 hover:underline"
                     >
                       {p.job?.title ?? "Lowongan"}
                     </Link>
@@ -95,12 +97,11 @@ export default async function MyProposalsPage() {
           })}
         </ul>
       ) : (
-        <div className="bg-muted/40 rounded-3xl border border-dashed py-16 text-center">
-          <h2 className="text-xl font-bold">Belum ada proposal</h2>
-          <p className="text-muted-foreground mt-2">
-            Temukan lowongan yang sesuai dengan keahlian Anda.
-          </p>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Belum ada proposal"
+          description="Temukan lowongan yang sesuai dengan keahlian Anda."
+        />
       )}
     </div>
   );

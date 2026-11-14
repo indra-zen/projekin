@@ -199,12 +199,12 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 |---|---|---|---|
 | 0 | Preparation | Branch, design references committed, this document, ARCHITECTURE/IMPLEMENTATION_PLAN pointers | Done (2026-11-14) |
 | 1 | Foundation | `globals.css` tokens, `@theme` shadows/fonts, base layer, utilities (§5), Bricolage in `layout.tsx`, `extendTailwindMerge` in `utils.ts`. Ledge offsets checked visually and kept (5 px strip + 2 px ink baseline) | Done (2026-11-14) |
-| – | Border-cascade audit | Bare `border`/`divide-*` in pages are now 1 px **ink** lines (global default). Internal dividers (`divide-y`, `border-t`/`-b`, about 26 uses) move to `hairline` while each page is restyled (phases 3–6) | Deferred to pages |
+| – | Border-cascade audit | Every internal divider (`divide-y`, `border-t`/`-b`) now uses `hairline`; outlined boxes use `border-2` ink | Done (2026-11-14) |
 | 2 | Primitives | All `ui/*`, new `NativeSelect`, form primitives, StatusBadge, VerificationBadge, review stars, UserAvatar. `EmptyState` moved to Phase 5 where its 10 call sites are replaced | Done (2026-11-14) |
 | 3 | Shell | Brand, site header, footer, dashboard and admin navs, AuthCard, LegalPage | Done (2026-11-14) |
-| 4 | Public pages | Landing, `/services`, `/jobs`, `/u/[username]` (done 2026-11-14). `/services/[id]`, `/services/[id]/order` and `/jobs/[id]` are detail pages, not yet restyled | Done for the four listed pages |
-| 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; replace copied select styles | — |
-| 6 | Admin | All `/admin` pages and admin forms | — |
+| 4 | Public pages | Landing, `/services`, `/jobs`, `/u/[username]`, plus the detail pages `/services/[id]`, `/services/[id]/order`, `/jobs/[id]` | Done (2026-11-14) |
+| 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; feature forms; all selects now `NativeSelect` | Done (2026-11-14) |
+| 6 | Admin | All `/admin` pages and admin forms | Done (2026-11-14) |
 | 7 | QA and handoff | Keyboard/focus pass, contrast check, reduced motion, 360 px sweep, docs, completion report | — |
 
 ### 8.1 Guardrails
@@ -241,3 +241,12 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 - The landing hero h1 breaks into three balanced lines at 1280 px (`text-balance`, marker on the last line); two lines at 768 px.
 - `ReviewList` items are now outlined cards (`bg-card`, `border-2`), which also restyles reviews on the order and service pages.
 - `UserAvatar` gained an optional `fallbackClassName` for large initials.
+
+### 8.6 Implementation notes (Phases 5–6)
+
+- Dashboard pages keep `text-3xl` titles without an eyebrow (information density); admin pages keep an "Admin" eyebrow because the admin toolbar has no other area marker.
+- Status cards on the order page carry a ledge per state: secondary (awaiting payment), success (in progress, completed), primary (delivered, review), accent (open dispute), muted (cancelled). The state label is a filled pill.
+- Coloured stat tiles (dashboard overview, earnings) use ink text only; pink (`accent`) tiles never carry muted text.
+- `Input type="file"`: the picker button is a small highlight sticker (in `ui/input.tsx`), so every upload field matches.
+- `/jobs/[id]`: the budget and client panels come first on small screens.
+- Service status chips in `/dashboard/services` use a local tone map (published → success, paused → highlight, draft/archived → muted); `toneFor()` in `lib/labels.ts` was left unchanged.

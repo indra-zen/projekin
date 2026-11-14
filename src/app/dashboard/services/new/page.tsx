@@ -22,7 +22,7 @@ export default async function NewServicePage() {
           Jelaskan keahlian yang dapat Anda bantu.
         </p>
       </div>
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Detail layanan</CardTitle>
         </CardHeader>

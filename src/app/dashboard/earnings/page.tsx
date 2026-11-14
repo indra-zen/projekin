@@ -1,10 +1,15 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { Wallet } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
+import { StatusBadge } from "@/components/jobs/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatIdr, formatOrderCode } from "@/lib/format";
 import { payoutStatusLabels } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+
+const tileColours = ["bg-highlight", "bg-success", "bg-secondary"] as const;
 import { requireOnboarded } from "@/server/auth";
 
 export const metadata: Metadata = { title: "Pendapatan" };
@@ -48,22 +53,26 @@ export default async function EarningsPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        {totals.map((t) => (
-          <Card key={t.label} className="rounded-2xl">
-            <CardContent>
-              <p className="text-muted-foreground text-sm">{t.label}</p>
-              <p className="mt-1 text-2xl font-extrabold">
-                {formatIdr(t.value)}
-              </p>
-            </CardContent>
-          </Card>
+        {totals.map((t, i) => (
+          <div
+            key={t.label}
+            className={cn(
+              "border-border shadow-hard rounded-2xl border-2 p-4",
+              tileColours[i % tileColours.length],
+            )}
+          >
+            <p className="text-sm font-bold">{t.label}</p>
+            <p className="font-display mt-1 text-2xl font-extrabold tabular-nums">
+              {formatIdr(t.value)}
+            </p>
+          </div>
         ))}
       </div>
 
       {orders.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardContent>
-            <ul className="divide-y text-sm">
+            <ul className="divide-hairline divide-y text-sm">
               {orders.map((o) => (
                 <li
                   key={o.id}
@@ -72,7 +81,7 @@ export default async function EarningsPage() {
                   <div className="min-w-0">
                     <Link
                       href={`/dashboard/orders/${o.id}` as Route}
-                      className="font-semibold break-words hover:underline"
+                      className="font-bold break-words underline-offset-4 hover:underline"
                     >
                       {formatOrderCode(o.order_number)} · {o.title}
                     </Link>
@@ -83,20 +92,14 @@ export default async function EarningsPage() {
                         : ""}
                     </p>
                   </div>
-                  <div className="shrink-0 sm:text-right">
-                    <p className="font-bold">
+                  <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
+                    <p className="font-display text-lg font-extrabold">
                       {formatIdr(o.freelancer_earnings)}
                     </p>
-                    <p
-                      className={cn(
-                        "text-xs",
-                        o.payout_status === "paid"
-                          ? "text-emerald-700"
-                          : "text-amber-700",
-                      )}
-                    >
-                      {payoutStatusLabels[o.payout_status]}
-                    </p>
+                    <StatusBadge
+                      status={o.payout_status}
+                      label={payoutStatusLabels[o.payout_status]}
+                    />
                   </div>
                 </li>
               ))}
@@ -104,12 +107,11 @@ export default async function EarningsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="bg-muted/40 rounded-3xl border border-dashed py-16 text-center">
-          <h2 className="text-lg font-bold">Belum ada pendapatan</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Pendapatan muncul di sini setelah klien menyelesaikan pesanan Anda.
-          </p>
-        </div>
+        <EmptyState
+          icon={Wallet}
+          title="Belum ada pendapatan"
+          description="Pendapatan muncul di sini setelah klien menyelesaikan pesanan Anda."
+        />
       )}
     </div>
   );

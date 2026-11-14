@@ -25,7 +25,7 @@ export default async function NewJobPage() {
           Lowongan dapat diubah selama belum ada proposal masuk.
         </p>
       </div>
-      <Card className="rounded-2xl">
+      <Card>
         <CardContent>
           <JobForm
             categories={categories ?? []}

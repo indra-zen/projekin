@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { requireOnboarded } from "@/server/auth";
 import { createClient } from "@/lib/supabase/server";
+import { Images } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { ledgeAt } from "@/lib/ledge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PortfolioForm } from "@/components/portfolio/portfolio-form";
 import { DeletePortfolioButton } from "@/components/portfolio/delete-portfolio-button";
@@ -24,20 +27,22 @@ export default async function PortfolioPage() {
   ]);
   if (!freelancer)
     return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <h1 className="text-xl font-bold">
-            Profil freelancer belum tersedia
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Selesaikan verifikasi mahasiswa terlebih dahulu.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-extrabold tracking-tight">Portofolio</h1>
+        <EmptyState
+          icon={Images}
+          title="Profil freelancer belum tersedia"
+          description="Selesaikan verifikasi mahasiswa terlebih dahulu."
+        >
+          <Button asChild>
+            <Link href="/dashboard/verification">Verifikasi mahasiswa</Link>
+          </Button>
+        </EmptyState>
+      </div>
     );
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Portofolio</h1>
           <p className="text-muted-foreground mt-2">
@@ -48,7 +53,7 @@ export default async function PortfolioPage() {
           <Link href={"/dashboard/portfolio/new" as Route}>Tambah karya</Link>
         </Button>
       </div>
-      <Card className="rounded-2xl">
+      <Card className="[--ledge:var(--primary)]">
         <CardHeader>
           <CardTitle>Tambah karya</CardTitle>
         </CardHeader>
@@ -64,9 +69,9 @@ export default async function PortfolioPage() {
           />
         </CardContent>
       </Card>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {items?.map((item) => (
-          <Card key={item.id} className="rounded-2xl">
+      <div className="grid gap-x-5 gap-y-8 sm:grid-cols-2">
+        {items?.map((item, index) => (
+          <Card key={item.id} className={ledgeAt(index)}>
             <CardHeader>
               <CardTitle>{item.title}</CardTitle>
             </CardHeader>

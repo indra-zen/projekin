@@ -28,7 +28,7 @@ export default async function ProfileSettingsPage() {
         </p>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Foto profil</CardTitle>
         </CardHeader>
@@ -41,13 +41,14 @@ export default async function ProfileSettingsPage() {
               path={profile.avatar_path}
               name={profile.full_name}
               username={profile.username}
-              className="size-20 text-xl"
+              className="shadow-hard-sm size-20"
+              fallbackClassName="text-xl"
             />
           </AvatarUploader>
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Data profil</CardTitle>
         </CardHeader>
@@ -63,7 +64,7 @@ export default async function ProfileSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Akun</CardTitle>
           <CardDescription>
@@ -74,7 +75,7 @@ export default async function ProfileSettingsPage() {
           <span className="break-all">{user.email}</span>
           <Link
             href="/reset-password"
-            className="text-primary font-semibold hover:underline"
+            className="text-primary font-bold underline-offset-4 hover:underline"
           >
             Ubah kata sandi
           </Link>

@@ -1,6 +1,7 @@
-import { Plus } from "lucide-react";
+import { Megaphone, Plus } from "lucide-react";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/jobs/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatBudgetRange, formatDate } from "@/lib/format";
@@ -39,17 +40,15 @@ export default async function MyJobsPage() {
         </Button>
       </div>
       {jobs && jobs.length > 0 ? (
-        <ul className="bg-card divide-y rounded-2xl border">
+        <ul className="bg-card divide-hairline shadow-ledge divide-y rounded-2xl border-2">
           {jobs.map((job) => (
             <li key={job.id}>
               <Link
                 href={`/dashboard/jobs/${job.id}` as Route}
-                className="hover:bg-muted/40 flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="hover:bg-highlight/30 flex flex-col gap-2 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">
-                    {job.title}
-                  </span>
+                  <span className="block truncate font-bold">{job.title}</span>
                   <span className="text-muted-foreground block text-sm">
                     {formatBudgetRange(job.budget_min, job.budget_max)} ·{" "}
                     {formatDate(job.created_at)} ·{" "}
@@ -66,13 +65,11 @@ export default async function MyJobsPage() {
           ))}
         </ul>
       ) : (
-        <div className="bg-muted/40 rounded-3xl border border-dashed py-16 text-center">
-          <h2 className="text-xl font-bold">Belum ada lowongan</h2>
-          <p className="text-muted-foreground mt-2">
-            Posting pekerjaan pertama Anda dan terima proposal dari mahasiswa
-            terverifikasi.
-          </p>
-        </div>
+        <EmptyState
+          icon={Megaphone}
+          title="Belum ada lowongan"
+          description="Posting pekerjaan pertama Anda dan terima proposal dari mahasiswa terverifikasi."
+        />
       )}
     </div>
   );

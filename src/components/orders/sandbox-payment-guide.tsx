@@ -31,8 +31,8 @@ function SimLink({ href, children }: { href: string; children: string }) {
 
 export function SandboxPaymentGuide() {
   return (
-    <details className="bg-card rounded-xl border p-3 text-xs leading-5">
-      <summary className="cursor-pointer text-sm font-semibold">
+    <details className="bg-card border-border rounded-xl border-2 p-3 text-xs leading-5">
+      <summary className="cursor-pointer text-sm font-bold">
         Cara membayar di mode Sandbox (tanpa uang sungguhan)
       </summary>
       <div className="mt-3 space-y-3">

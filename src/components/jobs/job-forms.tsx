@@ -10,6 +10,7 @@ import {
 } from "@/components/forms/form-primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   acceptProposalAction,
@@ -19,9 +20,6 @@ import {
   submitProposalAction,
   updateJobAction,
 } from "@/server/actions/jobs";
-
-const selectClass =
-  "border-input focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-[3px]";
 
 export type JobFormDefaults = {
   id?: string;
@@ -72,10 +70,9 @@ export function JobForm({
         />
       </Field>
       <Field label="Kategori" htmlFor="categoryId" error={err("categoryId")}>
-        <select
+        <NativeSelect
           id="categoryId"
           name="categoryId"
-          className={selectClass}
           defaultValue={v("categoryId")}
         >
           <option value="">Pilih kategori</option>
@@ -84,7 +81,7 @@ export function JobForm({
               {c.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       <Field
         label="Deskripsi"
@@ -193,7 +190,7 @@ export function CloseJobForm({ jobId }: { jobId: string }) {
   return (
     <form
       action={action}
-      className="w-full space-y-3 rounded-2xl border p-4"
+      className="bg-card border-border shadow-hard-sm w-full space-y-3 rounded-2xl border-2 p-4"
       noValidate
     >
       <FormAlert state={state} />
@@ -344,7 +341,7 @@ export function ProposalDecision({
       {mode === "accept" ? (
         <form
           action={acceptAction}
-          className="space-y-3 rounded-2xl border p-4"
+          className="bg-card border-border shadow-hard-sm space-y-3 rounded-2xl border-2 p-4"
         >
           <input type="hidden" name="proposalId" value={proposalId} />
           <p className="text-sm">
@@ -367,7 +364,7 @@ export function ProposalDecision({
       {mode === "reject" ? (
         <form
           action={rejectAction}
-          className="space-y-3 rounded-2xl border p-4"
+          className="bg-card border-border shadow-hard-sm space-y-3 rounded-2xl border-2 p-4"
           noValidate
         >
           <input type="hidden" name="proposalId" value={proposalId} />

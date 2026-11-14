@@ -37,7 +37,7 @@ export default async function EditJobPage({
     <div className="space-y-6">
       <h1 className="text-3xl font-extrabold tracking-tight">Ubah lowongan</h1>
       {editable ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardContent>
             <JobForm
               categories={categories ?? []}

@@ -153,7 +153,7 @@ export default async function OrderDetailPage({
           : "Admin";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Link
         href={
           (isFreelancer
@@ -167,18 +167,18 @@ export default async function OrderDetailPage({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-sm font-semibold">
+          <span className="sticker bg-card font-mono">
             {formatOrderCode(order.order_number)}
           </span>
           <StatusBadge
             status={order.status}
             label={orderStatusLabels[order.status]}
           />
-          <span className="text-muted-foreground text-xs">
+          <span className="sticker bg-muted">
             {order.source === "service" ? "Pesanan layanan" : "Dari lowongan"}
           </span>
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight break-words">
+        <h1 className="text-3xl leading-tight font-extrabold tracking-tight text-balance break-words">
           {order.title}
         </h1>
         {order.job_id ? (
@@ -199,11 +199,11 @@ export default async function OrderDetailPage({
       </div>
 
       {awaitingPayment ? (
-        <Card className="rounded-2xl border-amber-200 bg-amber-50/60">
+        <Card className="[--ledge:var(--secondary)]">
           <CardContent className="space-y-4 text-sm">
-            <p className="flex items-center gap-2 font-semibold text-amber-900">
-              <Clock className="size-4" /> Menunggu pembayaran hingga{" "}
-              {formatDateTime(order.payment_due_at)}
+            <p className="bg-highlight border-border flex w-fit items-start gap-2 rounded-xl border-2 px-3 py-2 font-bold">
+              <Clock className="mt-0.5 size-4 shrink-0" aria-hidden /> Menunggu
+              pembayaran hingga {formatDateTime(order.payment_due_at)}
             </p>
             {isClient ? (
               <PaymentPanel
@@ -217,7 +217,7 @@ export default async function OrderDetailPage({
                 }
               />
             ) : (
-              <p className="text-amber-900/80">
+              <p className="text-muted-foreground">
                 Klien belum membayar. Jangan mulai bekerja sebelum status
                 pesanan berubah menjadi &quot;Dikerjakan&quot;. Pesanan batal
                 otomatis jika tidak dibayar sampai batas waktu.
@@ -229,9 +229,9 @@ export default async function OrderDetailPage({
       ) : null}
 
       {order.status === "in_progress" ? (
-        <Card className="rounded-2xl">
+        <Card className="[--ledge:var(--success)]">
           <CardContent className="space-y-4 text-sm">
-            <p className="font-semibold">
+            <p className="bg-success border-border w-fit rounded-xl border-2 px-3 py-2 font-bold">
               Sedang dikerjakan
               {order.due_at ? ` · tenggat ${formatDateTime(order.due_at)}` : ""}
             </p>
@@ -253,10 +253,11 @@ export default async function OrderDetailPage({
       ) : null}
 
       {order.status === "delivered" ? (
-        <Card className="border-primary/30 rounded-2xl">
+        <Card className="[--ledge:var(--primary)]">
           <CardContent className="space-y-4 text-sm">
-            <p className="flex items-center gap-2 font-semibold">
-              <PackageCheck className="size-4" /> Hasil kerja sudah dikirim
+            <p className="bg-highlight border-border flex w-fit items-start gap-2 rounded-xl border-2 px-3 py-2 font-bold">
+              <PackageCheck className="mt-0.5 size-4 shrink-0" aria-hidden />{" "}
+              Hasil kerja sudah dikirim
               {order.delivered_at
                 ? ` · ${formatDateTime(order.delivered_at)}`
                 : ""}
@@ -276,10 +277,11 @@ export default async function OrderDetailPage({
       ) : null}
 
       {order.status === "completed" ? (
-        <Card className="rounded-2xl">
-          <CardContent className="space-y-1 text-sm">
-            <p className="flex items-center gap-2 font-semibold">
-              <CheckCircle2 className="text-primary size-4" /> Pesanan selesai
+        <Card className="[--ledge:var(--success)]">
+          <CardContent className="space-y-2 text-sm">
+            <p className="bg-success border-border flex w-fit items-start gap-2 rounded-xl border-2 px-3 py-2 font-bold">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />{" "}
+              Pesanan selesai
               {order.completed_at
                 ? ` · ${formatDateTime(order.completed_at)}`
                 : ""}
@@ -295,9 +297,9 @@ export default async function OrderDetailPage({
       ) : null}
 
       {order.status === "cancelled" ? (
-        <Card className="rounded-2xl">
-          <CardContent className="space-y-1 text-sm">
-            <p className="font-semibold">
+        <Card className="[--ledge:var(--muted)]">
+          <CardContent className="space-y-2 text-sm">
+            <p className="bg-muted border-border w-fit rounded-xl border-2 px-3 py-2 font-bold">
               Dibatalkan
               {order.cancelled_at
                 ? ` · ${formatDateTime(order.cancelled_at)}`
@@ -313,7 +315,7 @@ export default async function OrderDetailPage({
             ) : null}
 
             {refundPending ? (
-              <p className="font-medium text-amber-800">
+              <p className="sticker bg-highlight">
                 {refundStatusLabels.pending}.
               </p>
             ) : refunded ? (
@@ -324,7 +326,7 @@ export default async function OrderDetailPage({
       ) : null}
 
       {canDispute ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
               Ada masalah yang tidak dapat diselesaikan lewat pesan? Admin akan
@@ -339,9 +341,7 @@ export default async function OrderDetailPage({
       {disputes ? (
         <Card
           className={
-            disputes.status === "open"
-              ? "border-destructive/30 rounded-2xl"
-              : "rounded-2xl"
+            disputes.status === "open" ? "[--ledge:var(--accent)]" : undefined
           }
         >
           <CardHeader>
@@ -360,7 +360,7 @@ export default async function OrderDetailPage({
                 : ""}
             </p>
             {disputes.status === "resolved" ? (
-              <div className="bg-muted/50 space-y-1 rounded-lg p-3">
+              <div className="bg-muted border-border space-y-1 rounded-xl border-2 p-3">
                 <p className="font-semibold">
                   Keputusan admin:{" "}
                   {disputeResolutionLabels[disputes.resolution ?? ""] ??
@@ -384,7 +384,7 @@ export default async function OrderDetailPage({
       ) : null}
 
       {canReview ? (
-        <Card className="border-primary/30 rounded-2xl">
+        <Card className="[--ledge:var(--primary)]">
           <CardHeader>
             <CardTitle className="text-lg">Bagikan pengalaman Anda</CardTitle>
           </CardHeader>
@@ -395,7 +395,7 @@ export default async function OrderDetailPage({
       ) : null}
 
       {latestDelivery ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Hasil kerja</CardTitle>
           </CardHeader>
@@ -421,7 +421,7 @@ export default async function OrderDetailPage({
       ) : null}
 
       {order.status !== "awaiting_payment" && order.status !== "cancelled" ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Pesan pesanan</CardTitle>
           </CardHeader>
@@ -431,13 +431,13 @@ export default async function OrderDetailPage({
                 {messages.map((message) => (
                   <li
                     key={message.id}
-                    className={`rounded-xl p-3 text-sm ${
+                    className={`border-border rounded-xl border-2 p-3 text-sm ${
                       message.sender_id === viewer.user.id
-                        ? "bg-primary/10 ml-6"
-                        : "bg-muted mr-6"
+                        ? "bg-lilac/20 ml-6 rounded-br-sm"
+                        : "bg-card mr-6 rounded-bl-sm"
                     }`}
                   >
-                    <p className="text-muted-foreground mb-1 text-xs">
+                    <p className="text-muted-foreground mb-1 text-xs font-semibold">
                       {senderLabel(message.sender_id)} ·{" "}
                       {formatDateTime(message.created_at)}
                     </p>
@@ -465,8 +465,8 @@ export default async function OrderDetailPage({
         </Card>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        <Card className="min-w-0 rounded-2xl">
+      <div className="grid gap-x-6 gap-y-8 lg:grid-cols-[1fr_300px] lg:items-start">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle className="text-lg">Ringkasan pekerjaan</CardTitle>
           </CardHeader>
@@ -490,15 +490,17 @@ export default async function OrderDetailPage({
             </p>
           </CardContent>
         </Card>
-        <div className="space-y-4">
-          <Card className="rounded-2xl">
+        <div className="space-y-8">
+          <Card className="[--ledge:var(--secondary)]">
             <CardHeader>
               <CardTitle className="text-lg">Biaya</CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Harga</dt>
-                <dd className="font-semibold">{formatIdr(order.amount)}</dd>
+                <dd className="font-display text-base font-extrabold">
+                  {formatIdr(order.amount)}
+                </dd>
                 {!isClient ? (
                   <>
                     <dt className="text-muted-foreground">
@@ -506,7 +508,7 @@ export default async function OrderDetailPage({
                     </dt>
                     <dd>−{formatIdr(order.platform_fee)}</dd>
                     <dt className="text-muted-foreground">Pendapatan Anda</dt>
-                    <dd className="font-semibold">
+                    <dd className="font-display text-base font-extrabold">
                       {formatIdr(order.freelancer_earnings)}
                     </dd>
                   </>
@@ -521,7 +523,7 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
           {counterpart ? (
-            <Card className="rounded-2xl">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg">
                   {isClient ? "Freelancer" : "Klien"}
@@ -530,7 +532,7 @@ export default async function OrderDetailPage({
               <CardContent>
                 <Link
                   href={`/u/${counterpart.username}` as Route}
-                  className="flex items-center gap-3 hover:underline"
+                  className="flex items-center gap-3 underline-offset-4 hover:underline"
                 >
                   <UserAvatar
                     path={counterpart.avatar_path}
@@ -548,22 +550,22 @@ export default async function OrderDetailPage({
       </div>
 
       {attempts.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Riwayat pembayaran</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="text-muted-foreground text-xs">
+              <thead className="text-xs tracking-wide uppercase">
                 <tr>
-                  <th className="py-2 pr-3 font-medium">Percobaan</th>
-                  <th className="py-2 pr-3 font-medium">ID Midtrans</th>
-                  <th className="py-2 pr-3 font-medium">Metode</th>
-                  <th className="py-2 pr-3 font-medium">Jumlah</th>
-                  <th className="py-2 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-extrabold">Percobaan</th>
+                  <th className="py-2 pr-3 font-extrabold">ID Midtrans</th>
+                  <th className="py-2 pr-3 font-extrabold">Metode</th>
+                  <th className="py-2 pr-3 font-extrabold">Jumlah</th>
+                  <th className="py-2 font-extrabold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-hairline divide-y">
                 {attempts.map((p) => (
                   <tr key={p.id} className="align-top">
                     <td className="py-2 pr-3">
@@ -590,7 +592,7 @@ export default async function OrderDetailPage({
                         </span>
                       ) : null}
                       {p.refund_status !== "none" ? (
-                        <span className="block text-xs font-medium text-amber-800">
+                        <span className="sticker bg-highlight mt-1">
                           {refundStatusLabels[p.refund_status]}
                         </span>
                       ) : null}
@@ -604,7 +606,7 @@ export default async function OrderDetailPage({
       ) : null}
 
       {events && events.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Riwayat pesanan</CardTitle>
           </CardHeader>
@@ -613,9 +615,9 @@ export default async function OrderDetailPage({
               {events.map((event) => (
                 <li
                   key={event.id}
-                  className="flex flex-col sm:flex-row sm:gap-3"
+                  className="border-primary flex flex-col border-l-2 pl-3 sm:flex-row sm:gap-3"
                 >
-                  <span className="text-muted-foreground shrink-0">
+                  <span className="text-muted-foreground shrink-0 tabular-nums">
                     {formatDateTime(event.created_at)}
                   </span>
                   <span>

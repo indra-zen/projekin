@@ -12,6 +12,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -89,7 +90,7 @@ export function CancelOrderForm({
       <summary className={summaryClass("outline")}>Batalkan pesanan</summary>
       <form
         action={action}
-        className="bg-card mt-3 space-y-3 rounded-2xl border p-4"
+        className="bg-card border-border shadow-hard-sm mt-3 space-y-3 rounded-2xl border-2 p-4"
         noValidate
       >
         <FormAlert state={state} />
@@ -154,7 +155,7 @@ export function DeliverOrderForm({ orderId }: { orderId: string }) {
         />
       </Field>
       <div className="space-y-2">
-        <label htmlFor={`files-${orderId}`} className="text-sm font-medium">
+        <label htmlFor={`files-${orderId}`} className="text-sm font-bold">
           Lampiran (opsional)
         </label>
         <Input
@@ -380,18 +381,17 @@ export function OrderReviewForm({ orderId }: { orderId: string }) {
         htmlFor={`rating-${orderId}`}
         error={fieldError(state, "rating")}
       >
-        <select
+        <NativeSelect
           id={`rating-${orderId}`}
           name="rating"
           defaultValue={fieldValue(state, "rating") ?? "5"}
-          className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
         >
           {[5, 4, 3, 2, 1].map((rating) => (
             <option key={rating} value={rating}>
               {rating} / 5
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       <Field
         label="Ulasan (opsional)"
@@ -422,7 +422,7 @@ export function CompleteOrderForm({ orderId }: { orderId: string }) {
       </summary>
       <form
         action={action}
-        className="bg-card mt-3 space-y-3 rounded-2xl border p-4"
+        className="bg-card border-border shadow-hard-sm mt-3 space-y-3 rounded-2xl border-2 p-4"
       >
         <FormAlert state={state} />
         <input type="hidden" name="orderId" value={orderId} />

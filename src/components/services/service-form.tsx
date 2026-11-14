@@ -10,6 +10,7 @@ import {
   validateUpload,
 } from "@/lib/storage";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Field,
@@ -84,11 +85,10 @@ export function ServiceForm({
         htmlFor="categoryId"
         error={fieldError(state, "categoryId")}
       >
-        <select
+        <NativeSelect
           id="categoryId"
           name="categoryId"
           defaultValue={fieldValue(state, "categoryId", defaults.categoryId)}
-          className="border-input h-10 w-full rounded-md border bg-transparent px-3 text-sm"
         >
           <option value="">Pilih kategori</option>
           {categories.map((category) => (
@@ -96,7 +96,7 @@ export function ServiceForm({
               {category.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       <Field
         label="Judul layanan"

@@ -1,13 +1,23 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { Plus } from "lucide-react";
+import { Plus, Store } from "lucide-react";
 import { requireOnboarded } from "@/server/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatIdr } from "@/lib/format";
 import { serviceStatusLabels } from "@/lib/labels";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceActions } from "@/components/services/service-actions";
+import { ledgeAt } from "@/lib/ledge";
+import { cn } from "@/lib/utils";
+
+const statusTone: Record<string, string> = {
+  published: "bg-success",
+  paused: "bg-highlight",
+  draft: "bg-muted",
+  archived: "bg-muted",
+};
 
 export default async function ManageServicesPage() {
   const viewer = await requireOnboarded("/dashboard/services");
@@ -36,23 +46,31 @@ export default async function ManageServicesPage() {
         </Button>
       </div>
       {error ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            Layanan gagal dimuat. Coba lagi nanti.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Store}
+          title="Layanan gagal dimuat"
+          description="Coba lagi nanti."
+        />
       ) : services && services.length > 0 ? (
-        <div className="grid gap-4">
-          {services.map((service) => (
-            <Card key={service.id} className="rounded-2xl">
+        <div className="grid gap-y-8">
+          {services.map((service, index) => (
+            <Card key={service.id} className={ledgeAt(index)}>
               <CardHeader className="flex-row items-start justify-between">
                 <div>
                   <CardTitle>{service.title}</CardTitle>
                   <p className="text-muted-foreground mt-2 text-sm">
-                    {formatIdr(service.price)} · {service.delivery_days} hari
+                    <span className="font-display text-foreground text-lg font-extrabold">
+                      {formatIdr(service.price)}
+                    </span>{" "}
+                    · {service.delivery_days} hari
                   </p>
                 </div>
-                <span className="bg-secondary text-secondary-foreground shrink-0 self-start rounded-full px-3 py-1 text-xs font-semibold">
+                <span
+                  className={cn(
+                    "sticker shrink-0 self-start",
+                    statusTone[service.status] ?? "bg-muted",
+                  )}
+                >
                   {serviceStatusLabels[service.status]}
                 </span>
               </CardHeader>
@@ -70,19 +88,15 @@ export default async function ManageServicesPage() {
           ))}
         </div>
       ) : (
-        <Card className="rounded-2xl">
-          <CardContent className="py-16 text-center">
-            <h2 className="text-xl font-bold">Belum ada layanan</h2>
-            <p className="text-muted-foreground mt-2">
-              Buat layanan pertama Anda untuk mulai ditemukan klien.
-            </p>
-            <Button asChild className="mt-5">
-              <Link href={"/dashboard/services/new" as Route}>
-                Buat layanan
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Store}
+          title="Belum ada layanan"
+          description="Buat layanan pertama Anda untuk mulai ditemukan klien."
+        >
+          <Button asChild>
+            <Link href={"/dashboard/services/new" as Route}>Buat layanan</Link>
+          </Button>
+        </EmptyState>
       )}
     </div>
   );

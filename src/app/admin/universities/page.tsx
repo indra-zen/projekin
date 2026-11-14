@@ -18,10 +18,8 @@ export default async function AdminUniversitiesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Kampus</h1>
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Kampus</h1>
         <p className="text-muted-foreground mt-2">
           Mahasiswa yang email akunnya memakai domain di bawah ini langsung
           terverifikasi tanpa unggah KTM.
@@ -29,7 +27,7 @@ export default async function AdminUniversitiesPage() {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {universities?.map((u) => (
-          <Card key={u.id} className="rounded-2xl">
+          <Card key={u.id}>
             <CardHeader>
               <CardTitle className="text-lg">
                 {u.name}

@@ -140,7 +140,7 @@ export function PortfolioForm({ defaults }: { defaults: Defaults }) {
             <button
               type="button"
               key={path}
-              className="bg-muted rounded px-2 py-1 text-xs"
+              className="sticker bg-muted hover:bg-danger-soft cursor-pointer"
               onClick={() =>
                 setPaths((current) =>
                   current.filter((_, item) => item !== index),

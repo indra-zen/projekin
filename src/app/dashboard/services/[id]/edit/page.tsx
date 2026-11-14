@@ -32,7 +32,7 @@ export default async function EditServicePage({
           Perbarui detail layanan Anda.
         </p>
       </div>
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>Detail layanan</CardTitle>
         </CardHeader>

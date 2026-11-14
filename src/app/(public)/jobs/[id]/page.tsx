@@ -167,9 +167,11 @@ export default async function JobDetailPage({
         <div className="min-w-0 space-y-6">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-primary text-xs font-bold tracking-widest uppercase">
-                {job.category?.name}
-              </span>
+              {job.category?.name ? (
+                <span className="sticker bg-highlight">
+                  {job.category.name}
+                </span>
+              ) : null}
               {job.status !== "open" ? (
                 <StatusBadge
                   status={job.status}
@@ -177,29 +179,27 @@ export default async function JobDetailPage({
                 />
               ) : null}
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight break-words sm:text-4xl">
+            <h1 className="text-3xl leading-tight font-extrabold tracking-tight text-balance break-words md:text-4xl">
               {job.title}
             </h1>
-            <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <span>Diposting {formatDate(job.created_at)}</span>
               {job.deadline ? (
-                <span className="flex items-center gap-1">
-                  <CalendarDays className="size-4" /> Tenggat{" "}
+                <span className="sticker bg-secondary">
+                  <CalendarDays className="size-3.5" aria-hidden /> Tenggat{" "}
                   {formatDate(job.deadline)}
                 </span>
               ) : null}
             </div>
           </div>
-          <section className="bg-card rounded-2xl border p-6">
-            <h2 className="text-sm font-bold tracking-widest uppercase">
-              Deskripsi
-            </h2>
+          <section className="bg-card border-border shadow-ledge rounded-2xl border-2 p-6">
+            <h2 className="text-xl font-extrabold">Deskripsi</h2>
             <p className="mt-3 leading-7 whitespace-pre-wrap">
               {job.description}
             </p>
             {job.requirements ? (
               <>
-                <h2 className="mt-6 text-sm font-bold tracking-widest uppercase">
+                <h2 className="border-hairline mt-6 border-t pt-6 text-xl font-extrabold">
                   Persyaratan
                 </h2>
                 <p className="mt-3 leading-7 whitespace-pre-wrap">
@@ -208,7 +208,7 @@ export default async function JobDetailPage({
               </>
             ) : null}
           </section>
-          <Card className="rounded-2xl">
+          <Card className="[--ledge:var(--primary)]">
             <CardHeader>
               <CardTitle className="text-lg">Kirim proposal</CardTitle>
             </CardHeader>
@@ -217,18 +217,19 @@ export default async function JobDetailPage({
             </CardContent>
           </Card>
         </div>
-        <aside className="space-y-4">
-          <div className="bg-card rounded-2xl border p-5">
-            <p className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+        {/* Budget and client first on small screens: freelancers decide on those. */}
+        <aside className="order-first space-y-4 lg:order-none">
+          <div className="bg-success border-border shadow-hard rounded-2xl border-2 p-5">
+            <p className="text-xs font-extrabold tracking-widest uppercase">
               Anggaran
             </p>
-            <p className="mt-2 text-xl font-bold">
+            <p className="font-display mt-2 text-2xl leading-tight font-extrabold">
               {formatBudgetRange(job.budget_min, job.budget_max)}
             </p>
           </div>
           {job.client ? (
-            <div className="bg-card rounded-2xl border p-5">
-              <p className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
+            <div className="bg-card border-border shadow-ledge rounded-2xl border-2 p-5 [--ledge:var(--accent)]">
+              <p className="text-xs font-extrabold tracking-widest uppercase">
                 Klien
               </p>
               <Link

@@ -65,7 +65,7 @@ export default async function VerificationPage() {
         </p>
       </div>
 
-      <Card className="rounded-2xl">
+      <Card>
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
             Status: <VerificationBadge state={state} />
@@ -82,7 +82,7 @@ export default async function VerificationPage() {
         </CardHeader>
         {state === "rejected" && status?.latestRejectionReason ? (
           <CardContent>
-            <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <p className="bg-danger-soft border-destructive rounded-xl border-2 p-3 text-sm font-medium">
               Alasan: {status.latestRejectionReason}
             </p>
           </CardContent>
@@ -97,7 +97,7 @@ export default async function VerificationPage() {
       </Card>
 
       {status?.canSubmit ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">
               {state === "verified"
@@ -112,12 +112,12 @@ export default async function VerificationPage() {
       ) : null}
 
       {history && history.length > 0 ? (
-        <Card className="rounded-2xl">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Riwayat pengajuan</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y">
+            <ul className="divide-hairline divide-y">
               {history.map((item) => (
                 <li
                   key={item.id}

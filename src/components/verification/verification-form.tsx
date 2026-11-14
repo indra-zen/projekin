@@ -11,6 +11,7 @@ import {
 } from "@/components/forms/form-primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   DOCUMENT_TYPES,
   STUDENT_DOCUMENT_BUCKET,
@@ -26,9 +27,6 @@ export type UniversityOption = {
   name: string;
   emailEligible: boolean;
 };
-
-const selectClass =
-  "border-input focus-visible:border-ring focus-visible:ring-ring/50 h-10 w-full rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-[3px]";
 
 export function VerificationForm({
   userId,
@@ -101,10 +99,9 @@ export function VerificationForm({
         htmlFor="universityId"
         error={fieldError(state, "universityId")}
       >
-        <select
+        <NativeSelect
           id="universityId"
           name="universityId"
-          className={selectClass}
           value={universityId}
           onChange={(event) => setUniversityId(event.target.value)}
         >
@@ -113,11 +110,11 @@ export function VerificationForm({
               {u.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold">Metode verifikasi</legend>
+        <legend className="text-sm font-bold">Metode verifikasi</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           {(
             [
@@ -140,13 +137,13 @@ export function VerificationForm({
             <label
               key={option.value}
               className={cn(
-                "rounded-xl border p-4 text-sm transition-colors",
+                "border-border rounded-xl border-2 p-4 text-sm transition-colors",
                 option.disabled
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer",
                 effectiveMethod === option.value
-                  ? "border-primary bg-secondary/50"
-                  : "hover:bg-muted/50",
+                  ? "bg-highlight/60 shadow-hard-sm"
+                  : "bg-card hover:bg-highlight/25",
               )}
             >
               <span className="flex items-center gap-2 font-semibold">
@@ -219,7 +216,7 @@ export function VerificationForm({
                 {documentPath ? "Ganti dokumen" : "Pilih dokumen"}
               </Button>
               {documentPath ? (
-                <span className="text-primary flex min-w-0 items-center gap-1.5 text-sm">
+                <span className="sticker bg-success min-w-0">
                   <FileCheck2 className="size-4 shrink-0" />
                   <span className="truncate">{fileName}</span>
                 </span>

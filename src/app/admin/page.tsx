@@ -1,5 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { ledgeAt } from "@/lib/ledge";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/server/auth";
@@ -56,20 +58,24 @@ export default async function AdminOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">
+        <span className="eyebrow">Admin</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           Ringkasan
         </h1>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {queues.map((queue) => (
-          <Link key={queue.href} href={queue.href}>
-            <Card className="hover:border-primary/50 rounded-2xl transition-colors">
+      <div className="grid gap-x-5 gap-y-8 sm:grid-cols-2">
+        {queues.map((queue, index) => (
+          <Link
+            key={queue.href}
+            href={queue.href}
+            className="group rounded-2xl motion-safe:transition-transform motion-safe:hover:-translate-y-1 motion-safe:focus-visible:-translate-y-1"
+          >
+            <Card className={cn("h-full", ledgeAt(index))}>
               <CardContent>
-                <p className="text-muted-foreground text-sm">{queue.label}</p>
-                <p className="mt-1 text-4xl font-extrabold">
+                <p className="text-sm font-bold decoration-2 underline-offset-4 group-hover:underline">
+                  {queue.label}
+                </p>
+                <p className="font-display mt-1 text-5xl font-extrabold tabular-nums">
                   {queue.count ?? "–"}
                 </p>
                 <p className="text-muted-foreground mt-2 text-xs">

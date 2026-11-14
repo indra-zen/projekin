@@ -53,7 +53,7 @@ export default async function ServiceDetailPage({
     <div className="container py-10 md:py-16">
       <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
-          <div className="bg-muted aspect-video overflow-hidden rounded-3xl">
+          <div className="bg-lilac/30 border-border shadow-hard relative aspect-video overflow-hidden rounded-2xl border-2">
             {service.cover_image_path ? (
               // eslint-disable-next-line @next/next/no-img-element -- public Storage URL, not optimised
               <img
@@ -65,12 +65,21 @@ export default async function ServiceDetailPage({
                 alt=""
                 className="size-full object-cover"
               />
-            ) : null}
+            ) : (
+              <span
+                aria-hidden
+                className="font-display absolute inset-0 flex items-center justify-center text-9xl font-extrabold opacity-25"
+              >
+                {(service.category_name ?? "P").charAt(0)}
+              </span>
+            )}
           </div>
-          <p className="text-primary mt-8 text-sm font-bold tracking-widest uppercase">
-            {service.category_name}
-          </p>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-tight break-words">
+          {service.category_name ? (
+            <span className="sticker bg-highlight mt-8">
+              {service.category_name}
+            </span>
+          ) : null}
+          <h1 className="mt-4 text-3xl leading-tight font-extrabold tracking-tight text-balance break-words md:text-4xl">
             {service.title}
           </h1>
           <RatingSummary
@@ -78,14 +87,14 @@ export default async function ServiceDetailPage({
             count={service.rating_count}
             className="mt-3"
           />
-          <p className="text-muted-foreground mt-6 leading-8 break-words whitespace-pre-wrap">
+          <p className="mt-6 leading-8 break-words whitespace-pre-wrap">
             {service.description}
           </p>
 
           {reviews && reviews.length > 0 ? (
-            <section className="mt-10 space-y-4 border-t pt-8">
+            <section className="border-hairline mt-10 space-y-5 border-t pt-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-xl font-bold">Ulasan layanan ini</h2>
+                <h2 className="text-2xl font-extrabold">Ulasan layanan ini</h2>
                 <RatingSummary
                   avg={service.rating_avg}
                   count={service.rating_count}
@@ -95,11 +104,11 @@ export default async function ServiceDetailPage({
             </section>
           ) : null}
 
-          <div className="mt-10 border-t pt-8">
-            <h2 className="text-xl font-bold">Tentang freelancer</h2>
+          <div className="border-hairline mt-10 border-t pt-8">
+            <h2 className="text-2xl font-extrabold">Tentang freelancer</h2>
             <Link
               href={`/u/${service.freelancer_username}` as Route}
-              className="mt-5 flex items-center gap-3"
+              className="group bg-card border-border shadow-hard-sm mt-5 flex items-center gap-4 rounded-2xl border-2 p-4 transition-transform motion-safe:hover:-translate-y-0.5"
             >
               <UserAvatar
                 path={service.freelancer_avatar_path}
@@ -108,7 +117,7 @@ export default async function ServiceDetailPage({
                 className="size-14"
               />
               <div className="min-w-0">
-                <p className="font-bold">
+                <p className="font-bold decoration-2 underline-offset-4 group-hover:underline">
                   {service.freelancer_name ?? service.freelancer_username}
                 </p>
                 <p className="text-muted-foreground text-sm">
@@ -122,10 +131,13 @@ export default async function ServiceDetailPage({
             </Link>
             {portfolio && portfolio.length > 0 ? (
               <div className="mt-8">
-                <h3 className="font-bold">Portofolio</h3>
+                <h3 className="text-lg font-bold">Portofolio</h3>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {portfolio.map((item) => (
-                    <div key={item.id} className="bg-muted rounded-xl p-4">
+                    <div
+                      key={item.id}
+                      className="bg-card border-border rounded-xl border-2 p-4"
+                    >
                       <p className="font-semibold">{item.title}</p>
                       {item.description ? (
                         <p className="text-muted-foreground mt-1 text-sm">
@@ -139,20 +151,26 @@ export default async function ServiceDetailPage({
             ) : null}
           </div>
         </div>
-        <aside className="bg-card h-fit rounded-2xl border p-6 shadow-sm lg:sticky lg:top-8">
-          <p className="text-muted-foreground text-sm">Mulai dari</p>
-          <p className="mt-2 text-3xl font-extrabold">
+        <aside className="bg-card border-border shadow-hard-lg h-fit rounded-2xl border-2 p-6 lg:sticky lg:top-8">
+          <p className="text-muted-foreground text-sm font-semibold">
+            Mulai dari
+          </p>
+          <p className="font-display mt-1 text-4xl font-extrabold">
             {formatIdr(service.price ?? 0)}
           </p>
-          <div className="text-muted-foreground mt-5 flex justify-between text-sm">
-            <span>Pengerjaan</span>
-            <span>{service.delivery_days} hari</span>
-          </div>
-          <div className="text-muted-foreground mt-2 flex justify-between text-sm">
-            <span>Revisi</span>
-            <span>{service.revisions_included} kali</span>
-          </div>
-          <Button className="mt-6 w-full" asChild>
+          <dl className="border-hairline mt-5 space-y-2 border-t pt-5 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Pengerjaan</dt>
+              <dd className="sticker bg-muted">{service.delivery_days} hari</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Revisi</dt>
+              <dd className="sticker bg-muted">
+                {service.revisions_included} kali
+              </dd>
+            </div>
+          </dl>
+          <Button size="lg" className="mt-6 w-full" asChild>
             <Link href={`/services/${service.id}/order` as Route}>
               Pesan layanan
             </Link>

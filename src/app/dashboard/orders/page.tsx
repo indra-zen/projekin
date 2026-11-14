@@ -1,7 +1,9 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { ClipboardList } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/jobs/status-badge";
-import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/pagination";
 import { formatDate, formatIdr, formatOrderCode } from "@/lib/format";
 import { orderStatusLabels } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
@@ -63,10 +65,10 @@ export default async function OrdersPage({
             role="tab"
             aria-selected={role === tab.key}
             className={cn(
-              "rounded-full border px-4 py-1.5 text-sm font-medium",
+              "border-border rounded-xl border-2 px-4 py-2 text-sm font-bold transition-colors",
               role === tab.key
-                ? "bg-secondary text-secondary-foreground border-primary/30"
-                : "hover:bg-muted",
+                ? "bg-primary text-primary-foreground shadow-hard-sm"
+                : "bg-card hover:bg-highlight/60",
             )}
           >
             {tab.label}
@@ -80,10 +82,10 @@ export default async function OrdersPage({
             href={ordersHref({ role, status: value })}
             aria-current={status === value ? "page" : undefined}
             className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium",
+              "rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors",
               status === value
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:text-foreground",
+                ? "bg-highlight border-border shadow-hard-sm"
+                : "bg-muted hover:border-border border-transparent",
             )}
           >
             {value ? orderStatusLabels[value] : "Semua"}
@@ -91,15 +93,15 @@ export default async function OrdersPage({
         ))}
       </nav>
       {orders && orders.length > 0 ? (
-        <ul className="bg-card divide-y rounded-2xl border">
+        <ul className="bg-card divide-hairline shadow-ledge divide-y rounded-2xl border-2">
           {orders.map((order) => (
             <li key={order.id}>
               <Link
                 href={`/dashboard/orders/${order.id}` as Route}
-                className="hover:bg-muted/40 flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="hover:bg-highlight/30 flex flex-col gap-2 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold">
+                  <span className="block truncate font-bold">
                     {order.title}
                   </span>
                   <span className="text-muted-foreground block text-sm">
@@ -123,40 +125,26 @@ export default async function OrdersPage({
           ))}
         </ul>
       ) : (
-        <div className="bg-muted/40 rounded-3xl border border-dashed py-16 text-center">
-          <h2 className="text-xl font-bold">Belum ada pesanan</h2>
-          <p className="text-muted-foreground mt-2">
-            {status
+        <EmptyState
+          icon={ClipboardList}
+          title="Belum ada pesanan"
+          description={
+            status
               ? "Tidak ada pesanan dengan status ini."
               : role === "client"
                 ? "Pesanan muncul setelah Anda memesan layanan atau merekrut freelancer."
-                : "Pesanan muncul setelah layanan Anda dipesan atau proposal Anda diterima."}
-          </p>
-        </div>
+                : "Pesanan muncul setelah layanan Anda dipesan atau proposal Anda diterima."
+          }
+        />
       )}
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">
-            Halaman {page} dari {totalPages}
-          </span>
-          <div className="flex gap-2">
-            {page > 1 ? (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={ordersHref({ ...filter, page: page - 1 })}>
-                  Sebelumnya
-                </Link>
-              </Button>
-            ) : null}
-            {page < totalPages ? (
-              <Button variant="outline" size="sm" asChild>
-                <Link href={ordersHref({ ...filter, page: page + 1 })}>
-                  Berikutnya
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        prevHref={page > 1 ? ordersHref({ ...filter, page: page - 1 }) : null}
+        nextHref={
+          page < totalPages ? ordersHref({ ...filter, page: page + 1 }) : null
+        }
+      />
     </div>
   );
 }
