@@ -9,6 +9,7 @@ import {
   Megaphone,
   ShieldCheck,
   UserRound,
+  Wallet,
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -45,6 +46,11 @@ const items: { href: Route; label: string; icon: typeof LayoutDashboard }[] = [
   { href: "/dashboard/jobs", label: "Lowongan saya", icon: Megaphone },
   { href: "/dashboard/proposals", label: "Proposal saya", icon: FileText },
   { href: "/dashboard/orders", label: "Pesanan", icon: ClipboardList },
+  {
+    href: "/dashboard/earnings" as Route,
+    label: "Pendapatan",
+    icon: Wallet,
+  },
 ];
 
 export function DashboardNav({ isAdmin }: { isAdmin: boolean }) {
@@ -53,8 +59,8 @@ export function DashboardNav({ isAdmin }: { isAdmin: boolean }) {
     ? [
         ...items,
         {
-          href: "/admin/verifications" as Route,
-          label: "Admin: verifikasi",
+          href: "/admin" as Route,
+          label: "Admin",
           icon: ShieldCheck,
         },
       ]

@@ -179,6 +179,7 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `sendOrderMessage` / `requestRevision` / `openDispute` / `submitReview` | `sendOrderMessageAction` / `requestOrderRevisionAction` / `openOrderDisputeAction` / `createOrderReviewAction` (`orders.ts`) | RPCs `send_order_message` (parties or admin, BR-29), `request_order_revision` (`reason` 10–2.000), `open_order_dispute` (either party), `create_order_review`. |
 | `getOrderFileUrl` | — (not an action) | `DeliveryAttachments` creates a 60-second signed URL with `download` disposition when the user clicks, with the viewer's own session (the `order-files` policy admits the parties and admins). |
 | `deleteService` | `deleteServiceAction({ id })` (`services.ts`) | Zero deleted rows → `INVALID_STATE`/`NOT_DRAFT` (§1.5). |
+| `resolveDispute`, `markRefundCompleted`, `markPayoutPaid` | `resolveDisputeAction`, `markRefundCompletedAction`, `markPayoutPaidAction` (`admin-money.ts`, `useActionState` forms on `/admin/disputes`, `/admin/refunds`, `/admin/payouts`) | The form also sends `orderId` so the order page is revalidated. Overview counts on `/admin`; freelancer totals on `/dashboard/earnings`. |
 
 Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
 

@@ -141,6 +141,8 @@ export async function startPaymentAction(input: {
  * page. It asks the Midtrans Status API (server-side) and applies the result;
  * the browser's own success callback is never trusted (FR-PAY-02).
  */
+const SYNC_THROTTLE_MS = 5_000;
+
 export async function syncPaymentStatusAction(input: {
   orderId: string;
 }): Promise<ActionResult<PaymentSyncData>> {
@@ -160,7 +162,7 @@ export async function syncPaymentStatusAction(input: {
         .maybeSingle(),
       supabase
         .from("payments")
-        .select("id, midtrans_order_id, status, snap_token")
+        .select("id, midtrans_order_id, status, snap_token, last_synced_at")
         .eq("order_id", orderId)
         .order("attempt_no", { ascending: false }),
     ]);
@@ -185,6 +187,14 @@ export async function syncPaymentStatusAction(input: {
   };
   // No Snap transaction exists before a token is attached.
   if (!target || (target.status === "initiated" && !target.snap_token)) {
+    return ok(current);
+  }
+  // Throttle: at most one Status API call per attempt every few seconds,
+  // however often the client asks (QA residual risk 1).
+  if (
+    target.last_synced_at &&
+    Date.now() - new Date(target.last_synced_at).getTime() < SYNC_THROTTLE_MS
+  ) {
     return ok(current);
   }
   if (!configured()) return fail(notConfigured());

@@ -26,7 +26,7 @@ export default async function NewJobPage() {
         </p>
       </div>
       <Card className="rounded-2xl">
-        <CardContent className="pt-6">
+        <CardContent>
           <JobForm
             categories={categories ?? []}
             minDate={todayJakarta()}

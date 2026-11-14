@@ -109,6 +109,14 @@ export const reasonMessages: Record<string, string> = {
   ALREADY_REVIEWED: "Anda sudah memberikan ulasan untuk pesanan ini.",
   TOO_MANY_ATTACHMENTS: "Maksimal 10 lampiran per pengiriman.",
   ATTACHMENT_NOT_FOUND: "Lampiran tidak ditemukan. Unggah ulang file Anda.",
+  // Admin money operations (Phase 9)
+  INVALID_RESOLUTION: "Pilih keputusan sengketa.",
+  INVALID_ADMIN_NOTE: "Catatan admin wajib diisi (maksimal 2.000 karakter).",
+  DISPUTE_NOT_FOUND: "Sengketa tidak ditemukan.",
+  DISPUTE_NOT_OPEN: "Sengketa ini sudah diputuskan.",
+  INVALID_REFERENCE: "Referensi wajib diisi (maksimal 200 karakter).",
+  REFUND_NOT_PENDING: "Pengembalian dana ini tidak sedang menunggu diproses.",
+  PAYOUT_NOT_PENDING: "Pencairan dana ini tidak sedang menunggu diproses.",
   // Payments
   ORDER_NOT_AWAITING_PAYMENT: "Pesanan ini tidak sedang menunggu pembayaran.",
   PAYMENT_WINDOW_CLOSING:

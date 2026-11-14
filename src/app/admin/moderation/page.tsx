@@ -1,3 +1,4 @@
+import { freelancerStatusLabels, serviceStatusLabels } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/server/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +53,8 @@ export default async function ModerationPage() {
                     {item.profile?.full_name ?? item.profile?.username}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    @{item.profile?.username} · {item.status}
+                    @{item.profile?.username} ·{" "}
+                    {freelancerStatusLabels[item.status]}
                   </p>
                 </div>
                 <FreelancerModerationForm
@@ -75,7 +77,7 @@ export default async function ModerationPage() {
                 <div>
                   <p className="font-semibold">{item.title}</p>
                   <p className="text-muted-foreground text-sm">
-                    {item.status}
+                    {serviceStatusLabels[item.status]}
                     {item.blocked_at ? " · diblokir" : ""}
                   </p>
                 </div>

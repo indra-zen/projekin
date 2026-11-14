@@ -52,7 +52,7 @@ export default async function ServiceDetailPage({
   return (
     <div className="container py-10 md:py-16">
       <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
-        <main className="min-w-0">
+        <div className="min-w-0">
           <div className="bg-muted aspect-video overflow-hidden rounded-3xl">
             {service.cover_image_path ? (
               // eslint-disable-next-line @next/next/no-img-element -- public Storage URL, not optimised
@@ -138,7 +138,7 @@ export default async function ServiceDetailPage({
               </div>
             ) : null}
           </div>
-        </main>
+        </div>
         <aside className="bg-card h-fit rounded-2xl border p-6 shadow-sm lg:sticky lg:top-8">
           <p className="text-muted-foreground text-sm">Mulai dari</p>
           <p className="mt-2 text-3xl font-extrabold">

@@ -15,6 +15,7 @@ import {
 import { PaymentPanel } from "@/components/orders/payment-panel";
 import { StatusBadge } from "@/components/jobs/status-badge";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { env } from "@/lib/env";
 import {
@@ -26,6 +27,7 @@ import {
 } from "@/lib/format";
 import {
   cancellationReasonLabels,
+  disputeResolutionLabels,
   orderEventLabels,
   orderStatusLabels,
   paymentStatusLabels,
@@ -113,6 +115,7 @@ export default async function OrderDetailPage({
     (p) => p.status === "initiated" || p.status === "pending",
   );
   const refundPending = attempts.some((p) => p.refund_status === "pending");
+  const refunded = attempts.some((p) => p.refund_status === "refunded");
   const deliveryList = deliveries ?? [];
   const latestDelivery = deliveryList[0];
   const ownReview = (reviews ?? []).some(
@@ -197,7 +200,7 @@ export default async function OrderDetailPage({
 
       {awaitingPayment ? (
         <Card className="rounded-2xl border-amber-200 bg-amber-50/60">
-          <CardContent className="space-y-4 pt-6 text-sm">
+          <CardContent className="space-y-4 text-sm">
             <p className="flex items-center gap-2 font-semibold text-amber-900">
               <Clock className="size-4" /> Menunggu pembayaran hingga{" "}
               {formatDateTime(order.payment_due_at)}
@@ -227,7 +230,7 @@ export default async function OrderDetailPage({
 
       {order.status === "in_progress" ? (
         <Card className="rounded-2xl">
-          <CardContent className="space-y-4 pt-6 text-sm">
+          <CardContent className="space-y-4 text-sm">
             <p className="font-semibold">
               Sedang dikerjakan
               {order.due_at ? ` · tenggat ${formatDateTime(order.due_at)}` : ""}
@@ -251,7 +254,7 @@ export default async function OrderDetailPage({
 
       {order.status === "delivered" ? (
         <Card className="border-primary/30 rounded-2xl">
-          <CardContent className="space-y-4 pt-6 text-sm">
+          <CardContent className="space-y-4 text-sm">
             <p className="flex items-center gap-2 font-semibold">
               <PackageCheck className="size-4" /> Hasil kerja sudah dikirim
               {order.delivered_at
@@ -274,7 +277,7 @@ export default async function OrderDetailPage({
 
       {order.status === "completed" ? (
         <Card className="rounded-2xl">
-          <CardContent className="space-y-1 pt-6 text-sm">
+          <CardContent className="space-y-1 text-sm">
             <p className="flex items-center gap-2 font-semibold">
               <CheckCircle2 className="text-primary size-4" /> Pesanan selesai
               {order.completed_at
@@ -293,7 +296,7 @@ export default async function OrderDetailPage({
 
       {order.status === "cancelled" ? (
         <Card className="rounded-2xl">
-          <CardContent className="space-y-1 pt-6 text-sm">
+          <CardContent className="space-y-1 text-sm">
             <p className="font-semibold">
               Dibatalkan
               {order.cancelled_at
@@ -313,6 +316,8 @@ export default async function OrderDetailPage({
               <p className="font-medium text-amber-800">
                 {refundStatusLabels.pending}.
               </p>
+            ) : refunded ? (
+              <p className="font-medium">{refundStatusLabels.refunded}.</p>
             ) : null}
           </CardContent>
         </Card>
@@ -320,7 +325,7 @@ export default async function OrderDetailPage({
 
       {canDispute ? (
         <Card className="rounded-2xl">
-          <CardContent className="space-y-3 pt-6 text-sm">
+          <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
               Ada masalah yang tidak dapat diselesaikan lewat pesan? Admin akan
               meninjau sengketa dan memutuskan apakah dana diteruskan ke
@@ -331,18 +336,49 @@ export default async function OrderDetailPage({
         </Card>
       ) : null}
 
-      {order.status === "disputed" && disputes ? (
-        <Card className="border-destructive/30 rounded-2xl">
+      {disputes ? (
+        <Card
+          className={
+            disputes.status === "open"
+              ? "border-destructive/30 rounded-2xl"
+              : "rounded-2xl"
+          }
+        >
           <CardHeader>
-            <CardTitle className="text-lg">Sengketa sedang ditinjau</CardTitle>
+            <CardTitle className="text-lg">
+              {disputes.status === "open"
+                ? "Sengketa sedang ditinjau"
+                : "Sengketa sudah diputuskan"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="whitespace-pre-wrap">{disputes.reason}</p>
+            <p className="break-words whitespace-pre-wrap">{disputes.reason}</p>
             <p className="text-muted-foreground">
-              Dibuka {formatDateTime(disputes.created_at)}. Admin akan
-              menentukan apakah dana diteruskan ke freelancer atau dikembalikan
-              ke klien.
+              Dibuka {formatDateTime(disputes.created_at)}.
+              {disputes.status === "open"
+                ? " Admin akan menentukan apakah dana diteruskan ke freelancer atau dikembalikan ke klien."
+                : ""}
             </p>
+            {disputes.status === "resolved" ? (
+              <div className="bg-muted/50 space-y-1 rounded-lg p-3">
+                <p className="font-semibold">
+                  Keputusan admin:{" "}
+                  {disputeResolutionLabels[disputes.resolution ?? ""] ??
+                    disputes.resolution}
+                </p>
+                {disputes.admin_note ? (
+                  <p className="break-words whitespace-pre-wrap">
+                    {disputes.admin_note}
+                  </p>
+                ) : null}
+              </div>
+            ) : viewer.isAdmin ? (
+              <Button asChild size="sm">
+                <Link href={"/admin/disputes" as Route}>
+                  Putuskan di antrean sengketa
+                </Link>
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

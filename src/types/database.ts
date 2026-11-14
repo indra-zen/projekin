@@ -1493,6 +1493,83 @@ export type Database = {
           verified_until: string
         }[]
       }
+      mark_payout_paid: {
+        Args: { p_order_id: string; p_reference: string }
+        Returns: {
+          amount: number
+          brief: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_days: number
+          due_at: string | null
+          freelancer_earnings: number
+          freelancer_id: string
+          id: string
+          job_id: string | null
+          order_number: number
+          paid_at: string | null
+          payment_due_at: string
+          payout_marked_at: string | null
+          payout_marked_by: string | null
+          payout_reference: string | null
+          payout_status: Database["public"]["Enums"]["payout_status"]
+          platform_fee: number
+          proposal_id: string | null
+          requirements: string | null
+          revisions_allowed: number
+          revisions_used: number
+          service_id: string | null
+          source: Database["public"]["Enums"]["order_source"]
+          status: Database["public"]["Enums"]["order_status"]
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_refund_completed: {
+        Args: { p_payment_id: string; p_reference: string }
+        Returns: {
+          attempt_no: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          last_synced_at: string | null
+          midtrans_fraud_status: string | null
+          midtrans_order_id: string
+          midtrans_status_code: string | null
+          midtrans_transaction_id: string | null
+          midtrans_transaction_status: string | null
+          order_id: string
+          paid_at: string | null
+          payment_type: string | null
+          refund_marked_at: string | null
+          refund_marked_by: string | null
+          refund_reference: string | null
+          refund_status: Database["public"]["Enums"]["refund_status"]
+          snap_redirect_url: string | null
+          snap_token: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       open_order_dispute: {
         Args: { p_order_id: string; p_reason: string }
         Returns: {
@@ -1576,6 +1653,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_dispute: {
+        Args: {
+          p_admin_note: string
+          p_dispute_id: string
+          p_resolution: Database["public"]["Enums"]["dispute_resolution"]
+        }
+        Returns: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          opened_by: string
+          order_id: string
+          reason: string
+          resolution: Database["public"]["Enums"]["dispute_resolution"] | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["dispute_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "disputes"
           isOneToOne: true
           isSetofReturn: false
         }

@@ -38,7 +38,7 @@ export default async function EditJobPage({
       <h1 className="text-3xl font-extrabold tracking-tight">Ubah lowongan</h1>
       {editable ? (
         <Card className="rounded-2xl">
-          <CardContent className="pt-6">
+          <CardContent>
             <JobForm
               categories={categories ?? []}
               minDate={todayJakarta()}

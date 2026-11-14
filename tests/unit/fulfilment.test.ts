@@ -310,3 +310,122 @@ describe("security headers (ARCHITECTURE §12.1)", () => {
     expect(nextConfig.poweredByHeader).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 9: admin money actions
+// ---------------------------------------------------------------------------
+
+describe("admin money actions (Phase 9)", () => {
+  const DISPUTE = "55555555-6666-4777-8888-999999999999";
+  const PAYMENT = "66666666-7777-4888-8999-aaaaaaaaaaaa";
+  const adminActions = () => import("@/server/actions/admin-money");
+
+  it("refuse non-admins before calling any RPC", async () => {
+    const fake = signedIn({ isAdmin: false });
+    const a = await adminActions();
+    const results = [
+      await a.resolveDisputeAction(
+        null,
+        formData({
+          disputeId: DISPUTE,
+          orderId: ORDER,
+          resolution: "refund_client",
+          adminNote: "Catatan",
+        }),
+      ),
+      await a.markRefundCompletedAction(
+        null,
+        formData({ paymentId: PAYMENT, orderId: ORDER, reference: "R-1" }),
+      ),
+      await a.markPayoutPaidAction(
+        null,
+        formData({ orderId: ORDER, reference: "T-1" }),
+      ),
+    ];
+    for (const result of results) {
+      expect(result).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    }
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("validates the decision and note, then calls resolve_dispute", async () => {
+    const fake = signedIn({
+      isAdmin: true,
+      rpc: () => ({ data: null, error: null }),
+    });
+    const { resolveDisputeAction } = await adminActions();
+    const invalid = await resolveDisputeAction(
+      null,
+      formData({
+        disputeId: DISPUTE,
+        orderId: ORDER,
+        resolution: "half",
+        adminNote: " ",
+      }),
+    );
+    expect(invalid).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_ERROR" },
+    });
+    expect(fake.rpc).not.toHaveBeenCalled();
+
+    const result = await resolveDisputeAction(
+      null,
+      formData({
+        disputeId: DISPUTE,
+        orderId: ORDER,
+        resolution: "release_to_freelancer",
+        adminNote: "  Bukti sudah ditinjau.  ",
+      }),
+    );
+    expect(result).toMatchObject({ ok: true });
+    expect(fake.rpc).toHaveBeenCalledWith("resolve_dispute", {
+      p_dispute_id: DISPUTE,
+      p_resolution: "release_to_freelancer",
+      p_admin_note: "Bukti sudah ditinjau.",
+    });
+  });
+
+  it("marks refunds and payouts with a reference and maps RPC errors", async () => {
+    const fake = signedIn({
+      isAdmin: true,
+      rpc: (name) =>
+        name === "mark_payout_paid"
+          ? {
+              data: null,
+              error: { code: "PJ409", message: "PAYOUT_NOT_PENDING" },
+            }
+          : { data: null, error: null },
+    });
+    const { markRefundCompletedAction, markPayoutPaidAction } =
+      await adminActions();
+    expect(
+      await markRefundCompletedAction(
+        null,
+        formData({ paymentId: PAYMENT, orderId: ORDER, reference: "R-1" }),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(fake.rpc).toHaveBeenCalledWith("mark_refund_completed", {
+      p_payment_id: PAYMENT,
+      p_reference: "R-1",
+    });
+
+    const payout = await markPayoutPaidAction(
+      null,
+      formData({ orderId: ORDER, reference: "T-1" }),
+    );
+    expect(payout).toMatchObject({
+      ok: false,
+      error: {
+        reason: "PAYOUT_NOT_PENDING",
+        message: "Pencairan dana ini tidak sedang menunggu diproses.",
+      },
+    });
+    expect(
+      await markPayoutPaidAction(
+        null,
+        formData({ orderId: ORDER, reference: "" }),
+      ),
+    ).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
+  });
+});

@@ -93,6 +93,27 @@ export function paymentTypeLabel(type: string | null): string {
 /** System cancellation reasons stored in orders.cancellation_reason. */
 export const cancellationReasonLabels: Record<string, string> = {
   payment_window_expired: "Batas waktu pembayaran (24 jam) terlewati",
+  dispute_refund: "Sengketa diputuskan admin: dana dikembalikan ke klien",
+};
+
+export const serviceStatusLabels: Record<Enums<"service_status">, string> = {
+  draft: "Draf",
+  published: "Dipublikasikan",
+  paused: "Dijeda",
+  archived: "Diarsipkan",
+};
+
+export const freelancerStatusLabels: Record<
+  Enums<"freelancer_status">,
+  string
+> = {
+  active: "Aktif",
+  suspended: "Ditangguhkan",
+};
+
+export const disputeResolutionLabels: Record<string, string> = {
+  release_to_freelancer: "Dana diteruskan ke freelancer",
+  refund_client: "Dana dikembalikan ke klien",
 };
 
 type Tone = "neutral" | "positive" | "warning" | "negative";

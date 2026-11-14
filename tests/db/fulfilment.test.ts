@@ -840,3 +840,197 @@ describe("storage path constraints", () => {
     await expectPgError(insertItem([`${f}/../../x.png`]), "23514");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 9: admin money operations (20261114020000)
+// ---------------------------------------------------------------------------
+
+describe("admin money operations (Phase 9)", () => {
+  async function admin() {
+    const id = await createOnboardedUser(db);
+    await makeAdmin(db, id);
+    return id;
+  }
+
+  async function disputedOrder() {
+    const o = await paidOrder();
+    await deliver(o.freelancer, o.orderId);
+    const disputeId = (
+      await q<{ id: string }>(
+        user(o.client),
+        "select id from public.open_order_dispute($1, $2)",
+        [o.orderId, DISPUTE_REASON],
+      )
+    ).rows[0]!.id;
+    return { ...o, disputeId };
+  }
+
+  const resolve = (
+    actor: Actor,
+    disputeId: string,
+    resolution: string,
+    note = "Bukti percakapan sudah ditinjau.",
+  ) =>
+    q<{ status: string; resolution: string }>(
+      actor,
+      "select status, resolution from public.resolve_dispute($1, $2, $3)",
+      [disputeId, resolution, note],
+    );
+
+  const refundStatus = async (orderId: string) =>
+    (
+      await db.query<{ id: string; status: string; refund_status: string }>(
+        "select id, status, refund_status from public.payments where order_id = $1 and refund_status <> 'none'",
+        [orderId],
+      )
+    ).rows;
+
+  it("release_to_freelancer completes the order with payout pending", async () => {
+    const o = await disputedOrder();
+    const a = await admin();
+    const r = await resolve(user(a), o.disputeId, "release_to_freelancer");
+    expect(r.rows[0]).toEqual({
+      status: "resolved",
+      resolution: "release_to_freelancer",
+    });
+    const order = await orderRow(o.orderId);
+    expect(order.status).toBe("completed");
+    expect(order.payout_status).toBe("pending");
+    expect(order.completed_at).not.toBeNull();
+    expect((await events(o.orderId)).at(-1)).toBe("dispute_resolved");
+    // Completed through the dispute: both parties may now review.
+    await q(
+      user(o.client),
+      "select public.create_order_review($1, 5::smallint)",
+      [o.orderId],
+    );
+  });
+
+  it("refund_client cancels the order and marks the paid payment refund pending", async () => {
+    const o = await disputedOrder();
+    const a = await admin();
+    await resolve(user(a), o.disputeId, "refund_client");
+    const order = await db.query<{
+      status: string;
+      cancelled_by: string;
+      cancellation_reason: string;
+      payout_status: string;
+    }>("select * from public.orders where id = $1", [o.orderId]);
+    expect(order.rows[0]).toMatchObject({
+      status: "cancelled",
+      cancelled_by: a,
+      cancellation_reason: "dispute_refund",
+      payout_status: "none",
+    });
+    expect(await refundStatus(o.orderId)).toMatchObject([
+      { status: "paid", refund_status: "pending" },
+    ]);
+    expect(await events(o.orderId)).toEqual(
+      expect.arrayContaining(["cancelled", "dispute_resolved"]),
+    );
+  });
+
+  it("only admins resolve, once, with a note", async () => {
+    const o = await disputedOrder();
+    const a = await admin();
+    await expectPgError(
+      resolve(user(o.client), o.disputeId, "refund_client"),
+      "PJ403",
+      "FORBIDDEN",
+    );
+    await expectPgError(
+      resolve(user(o.freelancer), o.disputeId, "release_to_freelancer"),
+      "PJ403",
+      "FORBIDDEN",
+    );
+    await expectPgError(resolve(anon, o.disputeId, "refund_client"), "42501");
+    await expectPgError(
+      resolve(user(a), o.disputeId, "refund_client", "   "),
+      "PJ422",
+      "INVALID_ADMIN_NOTE",
+    );
+    await expectPgError(
+      resolve(user(a), "00000000-0000-4000-8000-000000000000", "refund_client"),
+      "PJ404",
+      "DISPUTE_NOT_FOUND",
+    );
+    await resolve(user(a), o.disputeId, "release_to_freelancer");
+    await expectPgError(
+      resolve(user(a), o.disputeId, "refund_client"),
+      "PJ409",
+      "DISPUTE_NOT_OPEN",
+    );
+  });
+
+  it("mark_refund_completed closes a pending refund once, admins only", async () => {
+    const o = await disputedOrder();
+    const a = await admin();
+    await resolve(user(a), o.disputeId, "refund_client");
+    const paymentId = (await refundStatus(o.orderId))[0]!.id;
+    const mark = (actor: Actor, ref = "Refund Midtrans 2026-11-14") =>
+      q<{ status: string; refund_status: string; refund_reference: string }>(
+        actor,
+        "select status, refund_status, refund_reference from public.mark_refund_completed($1, $2)",
+        [paymentId, ref],
+      );
+
+    await expectPgError(mark(user(o.client)), "PJ403", "FORBIDDEN");
+    await expectPgError(mark(anon), "42501");
+    await expectPgError(mark(user(a), ""), "PJ422", "INVALID_REFERENCE");
+    expect((await mark(user(a))).rows[0]).toEqual({
+      status: "refunded",
+      refund_status: "refunded",
+      refund_reference: "Refund Midtrans 2026-11-14",
+    });
+    await expectPgError(mark(user(a)), "PJ409", "REFUND_NOT_PENDING");
+    expect((await events(o.orderId)).at(-1)).toBe("refund_marked");
+  });
+
+  it("mark_payout_paid closes a pending payout once, admins only", async () => {
+    const o = await paidOrder();
+    await deliver(o.freelancer, o.orderId);
+    const a = await admin();
+    const mark = (actor: Actor, ref = "Transfer BCA 123") =>
+      q<{ payout_status: string; payout_reference: string }>(
+        actor,
+        "select payout_status, payout_reference from public.mark_payout_paid($1, $2)",
+        [o.orderId, ref],
+      );
+
+    // Not completed yet.
+    await expectPgError(mark(user(a)), "PJ409", "PAYOUT_NOT_PENDING");
+    await q(user(o.client), "select public.complete_order($1)", [o.orderId]);
+
+    await expectPgError(mark(user(o.freelancer)), "PJ403", "FORBIDDEN");
+    await expectPgError(mark(anon), "42501");
+    await expectPgError(mark(user(a), " "), "PJ422", "INVALID_REFERENCE");
+    expect((await mark(user(a))).rows[0]).toEqual({
+      payout_status: "paid",
+      payout_reference: "Transfer BCA 123",
+    });
+    await expectPgError(mark(user(a)), "PJ409", "PAYOUT_NOT_PENDING");
+    expect((await events(o.orderId)).at(-1)).toBe("payout_marked");
+  });
+
+  it("caps order-files at 50 objects per order", async () => {
+    const o = await paidOrder();
+    for (let i = 0; i < 49; i += 1) {
+      await putObject(
+        db,
+        "order-files",
+        `${o.orderId}/${o.freelancer}/f${i}.pdf`,
+      );
+    }
+    const insert = (name: string) =>
+      q(
+        user(o.freelancer),
+        "insert into storage.objects (bucket_id, name) values ('order-files', $1)",
+        [name],
+      );
+    await insert(`${o.orderId}/${o.freelancer}/f49.pdf`);
+    await expectPgError(
+      insert(`${o.orderId}/${o.freelancer}/f50.pdf`),
+      "42501",
+    );
+  });
+});

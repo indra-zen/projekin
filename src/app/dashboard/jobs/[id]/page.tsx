@@ -123,7 +123,7 @@ export default async function ManageJobPage({
 
       {liveOrder ? (
         <Card className="border-primary/30 rounded-2xl">
-          <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm">
               Pesanan <strong>{formatOrderCode(liveOrder.order_number)}</strong>
               : {orderStatusLabels[liveOrder.status]}

@@ -103,7 +103,7 @@ export default async function OrderServicePage({
         </div>
       ) : (
         <Card className="rounded-2xl">
-          <CardContent className="pt-6">
+          <CardContent>
             <ServiceOrderForm
               serviceId={service.id}
               prompt={service.requirements_prompt}

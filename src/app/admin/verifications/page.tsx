@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/server/auth";
-import { Button } from "@/components/ui/button";
-import type { Route } from "next";
 
 export const metadata: Metadata = { title: "Admin · Verifikasi mahasiswa" };
 
@@ -47,9 +45,6 @@ export default async function AdminVerificationsPage() {
           Verifikasi mahasiswa
         </h1>
       </div>
-      <Button asChild variant="outline">
-        <Link href={"/admin/moderation" as Route}>Moderasi marketplace</Link>
-      </Button>
 
       <Card className="rounded-2xl">
         <CardHeader>

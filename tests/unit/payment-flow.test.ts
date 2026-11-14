@@ -539,6 +539,32 @@ describe("syncPaymentStatusAction", () => {
     expect(rpcCalls).toHaveLength(0);
   });
 
+  it("does not call Midtrans again within 5 seconds of the last sync", async () => {
+    userClient(() => null, {
+      orders: {
+        data: { id: ORDER, client_id: UID, status: "awaiting_payment" },
+      },
+      payments: {
+        data: [
+          {
+            id: PAYMENT,
+            midtrans_order_id: MID,
+            status: "pending",
+            snap_token: "t",
+            last_synced_at: new Date(Date.now() - 1_000).toISOString(),
+          },
+        ],
+      },
+    });
+    state.admin = fakeAdmin().admin;
+    const fetchCalls = stubFetch(() => ({ status: 200, body: {} }));
+    expect(await syncPaymentStatusAction({ orderId: ORDER })).toMatchObject({
+      ok: true,
+      data: { orderStatus: "awaiting_payment", paymentStatus: "pending" },
+    });
+    expect(fetchCalls).toHaveLength(0);
+  });
+
   it("reports provider errors without changing anything", async () => {
     userClient(() => null, {
       orders: {

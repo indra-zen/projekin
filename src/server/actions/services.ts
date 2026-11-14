@@ -1,11 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  SERVICE_MEDIA_BUCKET,
-  IMAGE_TYPES,
-  isOwnObjectPath,
-} from "@/lib/storage";
+import { IMAGE_TYPES, isOwnObjectPath } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formDataToObject } from "@/lib/validation/common";
 import {
@@ -172,5 +168,3 @@ export async function deleteServiceAction(input: {
   revalidatePath("/dashboard/services");
   return ok(null, "Draf layanan dihapus.");
 }
-
-export { SERVICE_MEDIA_BUCKET };

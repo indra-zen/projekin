@@ -60,7 +60,7 @@ export function SiteHeaderClient({ viewer }: { viewer: HeaderViewer }) {
             <>
               {viewer.isAdmin ? (
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/admin/verifications">
+                  <Link href="/admin">
                     <ShieldCheck className="mr-2 size-4" /> Admin
                   </Link>
                 </Button>
@@ -124,7 +124,7 @@ export function SiteHeaderClient({ viewer }: { viewer: HeaderViewer }) {
                 </Link>
                 {viewer.isAdmin ? (
                   <Link
-                    href="/admin/verifications"
+                    href="/admin"
                     onClick={close}
                     className="hover:bg-muted flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium"
                   >
