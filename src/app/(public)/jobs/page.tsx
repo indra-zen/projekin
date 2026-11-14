@@ -90,17 +90,17 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
       </div>
 
       <form
-        className="bg-card mt-10 grid gap-3 rounded-2xl border p-4 shadow-sm md:grid-cols-[1fr_180px_130px_130px_150px_auto]"
+        className="bg-card mt-10 grid gap-3 rounded-2xl border p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[1fr_180px_130px_130px_150px_auto]"
         role="search"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
           <Search className="text-muted-foreground size-5 shrink-0" />
           <input
             name="q"
             defaultValue={search.q}
             maxLength={100}
             aria-label="Kata kunci"
-            className="h-10 w-full bg-transparent outline-none"
+            className="h-10 w-full min-w-0 bg-transparent outline-none"
             placeholder="Cari pekerjaan…"
           />
         </div>
@@ -146,10 +146,13 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
           <option value="newest">Terbaru</option>
           <option value="budget_desc">Anggaran tertinggi</option>
         </select>
-        <Button type="submit">Cari</Button>
+        <Button type="submit" className="sm:col-span-2 lg:col-span-1">
+          Cari
+        </Button>
       </form>
 
-      {error ? (
+      {/* PGRST103: a page past the end is an empty result, not a failure. */}
+      {error && error.code !== "PGRST103" ? (
         <div className="bg-muted/40 mt-10 rounded-3xl border border-dashed py-20 text-center">
           <h2 className="text-xl font-bold">Lowongan belum dapat dimuat</h2>
           <p className="text-muted-foreground mt-2">

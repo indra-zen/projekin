@@ -50,6 +50,7 @@ export const reasonMessages: Record<string, string> = {
     "Thumbnail wajib diunggah sebelum layanan dipublikasikan.",
   SERVICE_BLOCKED: "Layanan ini diblokir oleh admin.",
   SERVICE_ARCHIVED: "Layanan yang diarsipkan tidak dapat diubah.",
+  NOT_DRAFT: "Hanya layanan berstatus draf yang dapat dihapus.",
   MAX_PUBLISHED_SERVICES: "Anda telah mencapai batas layanan terpublikasi.",
   NOT_FOUND: "Data tidak ditemukan.",
   // Jobs & proposals
@@ -93,6 +94,8 @@ export const reasonMessages: Record<string, string> = {
     "Pesanan hanya dapat diselesaikan setelah freelancer mengirim hasil kerja.",
   INVALID_MESSAGE: "Pesan wajib diisi (maksimal 5.000 karakter).",
   MESSAGES_NOT_AVAILABLE: "Pesan tersedia setelah pembayaran diterima.",
+  MESSAGES_CLOSED:
+    "Ruang pesan hanya tersedia selama pesanan dikerjakan, dikirim, atau dalam sengketa.",
   INVALID_REVISION_REASON: "Alasan revisi harus 10–2.000 karakter.",
   NO_REVISIONS_REMAINING: "Jatah revisi untuk pesanan ini sudah habis.",
   INVALID_DISPUTE_REASON: "Alasan sengketa harus 20–2.000 karakter.",

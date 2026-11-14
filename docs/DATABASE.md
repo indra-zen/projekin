@@ -431,6 +431,8 @@ Constraints: `UNIQUE (order_id, reviewer_id)` and `CHECK (reviewer_id <> reviewe
 
 `reviews` is publicly readable, so the rating views expose nothing extra. `service_listings` is `security_invoker`, so the `services` RLS policy still decides which rows are visible.
 
+As implemented: the three rating views were added in `20261114010000` (`rating_count` is an `integer`), together with the `SELECT` grant on `reviews` to `anon` that `20261114000000` had left out. `service_listings` gained `rating_avg` and `rating_count` (0 when unrated) as its last columns; it does not include `search` (`/services` matches title and description with `ilike`).
+
 ---
 
 ## 5. Indexes
@@ -574,6 +576,8 @@ The `MESSAGE` is a stable machine-readable reason (e.g. `ORDER_NOT_AWAITING_PAYM
 | `mark_payout_paid(p_order_id uuid, p_reference text) → orders` | A (admin) | Order `completed`, `payout_status='pending'` → `paid`, reference, marker. Event `payout_marked`. |
 | `expire_unpaid_orders() → integer` | C | For orders `awaiting_payment` with `payment_due_at + payment_grace() < now()`: same effects as a pre-payment `cancel_order` with `cancelled_by = NULL`, `cancellation_reason = 'payment_window_expired'`. Live attempts → `expired`. Rows locked by a concurrent payment or cancellation are skipped (`FOR UPDATE SKIP LOCKED`) until the next run. Returns count. |
 | `auto_complete_delivered_orders() → integer` | C | For orders `delivered` with `delivered_at + auto_complete_after() < now()`: → `completed`, `payout_status='pending'`, event `auto_completed`. Returns count. |
+
+**Implemented names (Phases 7–8, `20261114000000`, corrected in `20261114010000`).** `request_revision` is `request_order_revision(p_order_id, p_reason)` (reason 10–2.000 characters, also posted to the thread; `NO_REVISIONS_REMAINING`). `open_dispute` is `open_order_dispute(p_order_id, p_reason)`. `submit_review` is `create_order_review(p_order_id, p_rating smallint, p_comment)` (a NULL rating → `PJ422 INVALID_RATING`; non-completed or older than 14 days → `PJ409 REVIEW_WINDOW_CLOSED`). Order messages are written only through `send_order_message(p_order_id, p_body)`: the two parties or an admin, while the order is `in_progress`, `delivered` or `disputed` (`MESSAGES_NOT_AVAILABLE` before payment, `MESSAGES_CLOSED` after completion or cancellation). `auto_complete_delivered_orders` runs every 15 minutes. `resolve_dispute`, `mark_refund_completed` and `mark_payout_paid` arrive in Phase 9.
 
 **Direct table writes** (not via RPC) are limited to: `profiles` (granted columns), `freelancer_profiles` (granted columns), `portfolio_items`, `services` (insert/update granted columns, delete drafts), `jobs` (insert, update granted columns while editable), and `order_messages` (insert). The rest go through RPCs.
 
@@ -791,6 +795,8 @@ Size and MIME limits are set on the bucket (`file_size_limit`, `allowed_mime_typ
 | student-documents | `folder(1) = uid::text OR is_admin()` | `folder(1) = uid::text` | — (immutable evidence) |
 | order-files | `is_order_participant(folder(1)::uuid) OR is_admin()` (via a safe-cast helper) | `can_upload_order_file(name)` | — (immutable evidence) |
 
+As implemented (`20261114000000`, `20261114010000`): `order-files` INSERT is allowed only for the order's **freelancer**, into `{order_id}/{own uid}/…`, while the order is `in_progress` (deliveries are the only attachments); SELECT for the two parties and admins (the order id is compared as text, so malformed folders simply do not match); no UPDATE or DELETE policy (a freelancer delete policy from `000000` was dropped in `010000`). Downloads use 60-second signed URLs with `download` disposition, created on click with the viewer's own session.
+
 Private files are served only through **signed URLs** (60 s expiry), created with the **user's** session client, so policies apply.
 
 ---
@@ -858,6 +864,10 @@ Migrations live in `supabase/migrations/` (Supabase CLI, timestamped).
 | `20261113080800_jobs_proposals_orders.sql` | Enums `job_status`, `proposal_status`, `order_source`, `order_status`, `payout_status`; jobs, proposals, orders, order_events; helpers; RLS and grants; RPCs `close_job`, `submit_proposal`, `withdraw_proposal`, `reject_proposal`, `accept_proposal`, `cancel_order` |
 | `20261113080900_portfolio_moderation.sql` (Copilot) | `set_freelancer_status`, `admin_set_service_block`, `portfolio` bucket and policies. Committed as `…080800_…`, which collided with the jobs migration's version, so `db push` never applied it. Renamed to `080900` and applied on 2026-11-13. |
 | `20261113081000_payments_and_order_lifecycle.sql` | Enums `payment_status`, `refund_status`; payments, payment_notifications, order_deliveries; `is_order_client`, `apply_order_cancellation`, `payment_grace`, `max_payment_attempts`; RLS and grants; RPCs `create_service_order`, `create_payment_attempt`, `attach_snap_token`, `fail_payment_attempt`, `apply_payment_status`, `expire_unpaid_orders`, `deliver_order`, `complete_order`; full `cancel_order`; `accept_proposal` gains the per-client lock; `pg_cron` schedule |
+| `20261114000000_fulfilment_reviews.sql` (Copilot) | Enums `dispute_status`, `dispute_resolution`, `review_role`; order_messages, disputes, reviews; `order-files` bucket and policies; RPCs `send_order_message`, `request_order_revision`, `open_order_dispute`, `create_order_review`, `auto_complete_delivered_orders` + `pg_cron` |
+| `20261114000100_fix_review_service_context.sql` (Copilot) | Trigger: freelancer reviews never carry a `service_id` |
+| `20261114000200_align_order_file_limits.sql` (Copilot) | `order-files`: 25 MB, Office MIME types |
+| `20261114010000_qa_security_fixes.sql` | QA review: `SELECT` on reviews for `anon`; rating views and `service_listings` rating columns; drops the freelancer delete policy on `order-files`; `send_order_message` (BR-29, admins) and `create_order_review` (NULL rating, duplicate race) replaced; `private.storage_paths_owned` and `NOT VALID` checks on service cover and portfolio image paths. Applied to hosted dev on 2026-11-14 |
 
 The remaining tables follow this order as their phases arrive:
 

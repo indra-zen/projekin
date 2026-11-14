@@ -18,6 +18,8 @@ export type FakeOptions = {
     table: string,
     values: unknown,
   ) => { data: unknown; error: unknown };
+  /** Result of `.delete()...select()` (defaults to no deleted rows). */
+  delete?: (table: string) => { data: unknown; error: unknown };
 };
 
 /**
@@ -39,6 +41,7 @@ export function fakeSupabase(options: FakeOptions) {
   function from(table: string) {
     let pendingUpdate: unknown;
     let pendingInsert: unknown;
+    let pendingDelete = false;
     const resolveRead = (): { data: unknown; error: null } => {
       if (table === "profiles")
         return { data: options.profile ?? null, error: null };
@@ -52,6 +55,11 @@ export function fakeSupabase(options: FakeOptions) {
       return { data: read?.data ?? null, error: null };
     };
     const resolve = () => {
+      if (pendingDelete) {
+        return options.delete
+          ? options.delete(table)
+          : { data: [], error: null };
+      }
       if (pendingUpdate !== undefined) {
         updates.push({ table, values: pendingUpdate });
         return options.update
@@ -87,6 +95,10 @@ export function fakeSupabase(options: FakeOptions) {
     };
     builder.insert = (values: unknown) => {
       pendingInsert = values;
+      return builder;
+    };
+    builder.delete = () => {
+      pendingDelete = true;
       return builder;
     };
     // Awaiting the builder directly (e.g. count queries).

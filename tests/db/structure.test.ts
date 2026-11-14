@@ -66,6 +66,55 @@ describe("schema structure", () => {
     );
   });
 
+  it("revokes EXECUTE on every public RPC from anon", async () => {
+    const r = await db.query<{ fn: string }>(`
+      select p.proname as fn
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.prokind = 'f'
+        and has_function_privilege('anon', p.oid, 'execute')
+    `);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("keeps the payment and scheduler functions service-role only", async () => {
+    const r = await db.query<{ fn: string }>(`
+      select p.proname as fn
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname in ('attach_snap_token', 'fail_payment_attempt', 'apply_payment_status',
+                          'expire_unpaid_orders', 'auto_complete_delivered_orders')
+        and has_function_privilege('authenticated', p.oid, 'execute')
+    `);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("pins search_path on every SECURITY DEFINER function", async () => {
+    const r = await db.query<{ fn: string }>(`
+      select n.nspname || '.' || p.proname as fn
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname in ('public', 'private') and p.prosecdef
+        and not coalesce(array_to_string(p.proconfig, ',') like '%search_path=%', false)
+    `);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("creates every public view with security_invoker, so RLS still applies", async () => {
+    const r = await db.query<{ relname: string; invoker: boolean }>(`
+      select c.relname,
+             coalesce(array_to_string(c.reloptions, ',') like '%security_invoker=true%', false) as invoker
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relkind = 'v'
+      order by c.relname
+    `);
+    expect(r.rows.map((v) => v.relname)).toEqual([
+      "client_rating_stats",
+      "freelancer_rating_stats",
+      "service_listings",
+      "service_rating_stats",
+    ]);
+    expect(r.rows.filter((v) => !v.invoker)).toEqual([]);
+  });
+
   it("seeds the Tarakan universities without email domains", async () => {
     const r = await db.query<{ name: string; email_domains: string[] }>(
       "select name, email_domains from public.universities order by name",

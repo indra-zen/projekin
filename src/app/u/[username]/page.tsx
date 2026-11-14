@@ -1,10 +1,11 @@
-import { MapPin, Star } from "lucide-react";
+import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { RatingSummary, ReviewList } from "@/components/reviews/review-display";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedStudentBadge } from "@/components/verification/verification-badge";
 import { isVerifiedStudent } from "@/lib/capabilities";
@@ -31,11 +32,29 @@ const loadProfile = cache(async (username: string) => {
     )
     .eq("user_id", profile.id)
     .maybeSingle();
-  const [{ data: services }, { data: portfolio }, { data: reviews }] =
-    await Promise.all([
+  // FR-PROF-02: reviews received as freelancer and as client, each with its
+  // own average and count (from the rating views, not the latest page only).
+  const latestReviews = (reviewerRole: "client" | "freelancer") =>
+    supabase
+      .from("reviews")
+      .select(
+        "id, rating, comment, created_at, reviewer:profiles!reviews_reviewer_id_fkey(username, full_name)",
+      )
+      .eq("reviewee_id", profile.id)
+      .eq("reviewer_role", reviewerRole)
+      .order("created_at", { ascending: false })
+      .limit(10);
+  const [
+    { data: services },
+    { data: portfolio },
+    { data: asFreelancer },
+    { data: asClient },
+    { data: freelancerStats },
+    { data: clientStats },
+  ] = await Promise.all([
     supabase
       .from("service_listings")
-      .select("id, title, price, delivery_days")
+      .select("id, title, price, delivery_days, rating_avg, rating_count")
       .eq("freelancer_id", profile.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -43,19 +62,40 @@ const loadProfile = cache(async (username: string) => {
       .select("id, title, description, external_url")
       .eq("freelancer_id", profile.id)
       .order("sort_order"),
+    latestReviews("client"),
+    latestReviews("freelancer"),
     supabase
-      .from("reviews")
-      .select("id, rating, comment, reviewer:profiles!reviews_reviewer_id_fkey(username, full_name)")
-      .eq("reviewee_id", profile.id)
-      .order("created_at", { ascending: false })
-      .limit(10),
+      .from("freelancer_rating_stats")
+      .select("rating_avg, rating_count")
+      .eq("user_id", profile.id)
+      .maybeSingle(),
+    supabase
+      .from("client_rating_stats")
+      .select("rating_avg, rating_count")
+      .eq("user_id", profile.id)
+      .maybeSingle(),
   ]);
   return {
     profile,
     freelancer,
     services: services ?? [],
     portfolio: portfolio ?? [],
-    reviews: reviews ?? [],
+    reviewGroups: [
+      {
+        key: "freelancer",
+        title: "Ulasan sebagai freelancer",
+        reviews: asFreelancer ?? [],
+        avg: freelancerStats?.rating_avg ?? 0,
+        count: freelancerStats?.rating_count ?? 0,
+      },
+      {
+        key: "client",
+        title: "Ulasan sebagai klien",
+        reviews: asClient ?? [],
+        avg: clientStats?.rating_avg ?? 0,
+        count: clientStats?.rating_count ?? 0,
+      },
+    ].filter((group) => group.count > 0 && group.reviews.length > 0),
   };
 });
 
@@ -77,7 +117,7 @@ export default async function PublicProfilePage({
   const { username } = await params;
   const data = await loadProfile(username);
   if (!data) notFound();
-  const { profile, freelancer, services, portfolio, reviews } = data;
+  const { profile, freelancer, services, portfolio, reviewGroups } = data;
   const verified = isVerifiedStudent(freelancer);
 
   return (
@@ -153,12 +193,26 @@ export default async function PublicProfilePage({
 
             {verified && services.length > 0 ? (
               <section className="mt-8 space-y-3">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Layanan</h2>
+                <h2 className="text-sm font-bold tracking-widest uppercase">
+                  Layanan
+                </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {services.map((service) => (
-                    <Link key={service.id} href={`/services/${service.id}` as Route} className="rounded-xl border p-4 transition-shadow hover:shadow-sm">
+                    <Link
+                      key={service.id}
+                      href={`/services/${service.id}` as Route}
+                      className="rounded-xl border p-4 transition-shadow hover:shadow-sm"
+                    >
                       <p className="font-semibold">{service.title}</p>
-                      <p className="text-primary mt-2 text-sm font-bold">{formatIdr(service.price ?? 0)} · {service.delivery_days} hari</p>
+                      <p className="text-primary mt-2 text-sm font-bold">
+                        {formatIdr(service.price ?? 0)} ·{" "}
+                        {service.delivery_days} hari
+                      </p>
+                      <RatingSummary
+                        avg={service.rating_avg}
+                        count={service.rating_count}
+                        className="mt-1"
+                      />
                     </Link>
                   ))}
                 </div>
@@ -167,13 +221,28 @@ export default async function PublicProfilePage({
 
             {verified && portfolio.length > 0 ? (
               <section className="mt-8 space-y-3">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Portofolio</h2>
+                <h2 className="text-sm font-bold tracking-widest uppercase">
+                  Portofolio
+                </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {portfolio.map((item) => (
                     <div key={item.id} className="bg-muted rounded-xl p-4">
                       <p className="font-semibold">{item.title}</p>
-                      {item.description ? <p className="text-muted-foreground mt-1 text-sm">{item.description}</p> : null}
-                      {item.external_url ? <a href={item.external_url} target="_blank" rel="noreferrer" className="text-primary mt-2 inline-block text-sm font-semibold">Lihat karya</a> : null}
+                      {item.description ? (
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      {item.external_url ? (
+                        <a
+                          href={item.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow ugc"
+                          className="text-primary mt-2 inline-block text-sm font-semibold"
+                        >
+                          Lihat karya
+                        </a>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -182,41 +251,17 @@ export default async function PublicProfilePage({
           </section>
         ) : null}
 
-        {reviews.length > 0 ? (
-          <section className="mt-8 space-y-4">
-            <div className="flex items-center justify-between gap-3">
+        {reviewGroups.map((group) => (
+          <section key={group.key} className="mt-8 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold tracking-widest uppercase">
-                Ulasan
+                {group.title}
               </h2>
-              <span className="text-muted-foreground flex items-center gap-1 text-sm">
-                <Star className="size-4 fill-current text-amber-500" />
-                {(
-                  reviews.reduce((sum, review) => sum + review.rating, 0) /
-                  reviews.length
-                ).toFixed(1)}{" "}
-                ({reviews.length})
-              </span>
+              <RatingSummary avg={group.avg} count={group.count} />
             </div>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {reviews.map((review) => (
-                <li key={review.id} className="bg-muted/50 rounded-xl p-4">
-                  <div className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-semibold">
-                      {review.reviewer?.full_name ??
-                        `@${review.reviewer?.username ?? "pengguna"}`}
-                    </span>
-                    <span className="text-amber-600">{"★".repeat(review.rating)}</span>
-                  </div>
-                  {review.comment ? (
-                    <p className="text-muted-foreground mt-2 text-sm leading-6 whitespace-pre-wrap">
-                      {review.comment}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <ReviewList reviews={group.reviews} />
           </section>
-        ) : null}
+        ))}
 
         <p className="text-muted-foreground mt-8 text-xs">
           Bergabung sejak {formatDate(profile.created_at)}

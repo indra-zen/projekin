@@ -430,6 +430,7 @@ Rendered as plain text (`whitespace-pre-wrap`), never through `dangerouslySetInn
 
 - `Strict-Transport-Security` (Vercel default on custom domains), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 - `Content-Security-Policy`: `frame-ancestors 'none'` from day one. The full CSP (script, frame and connect sources for Snap and Supabase) ships **Report-Only** first in Phase 10 and is tuned against the origins Snap actually loads in sandbox, then enforced.
+- Implemented (2026-11-14, `next.config.ts`): `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` on every route, and `poweredByHeader: false`. Until then the app sent none of these.
 
 ### 12.2 Risk register
 

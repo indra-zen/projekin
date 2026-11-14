@@ -6,6 +6,7 @@ import { cache } from "react";
 import { ProposalForm } from "@/components/jobs/job-forms";
 import { StatusBadge } from "@/components/jobs/status-badge";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { RatingSummary } from "@/components/reviews/review-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBudgetRange, formatDate, formatIdr } from "@/lib/format";
@@ -146,6 +147,13 @@ export default async function JobDetailPage({
 }: PageProps<"/jobs/[id]">) {
   const job = await loadJob((await params).id);
   if (!job) notFound();
+  // FR-REV-02: freelancers see the client's rating before proposing.
+  const supabase = await createClient();
+  const { data: clientStats } = await supabase
+    .from("client_rating_stats")
+    .select("rating_avg, rating_count")
+    .eq("user_id", job.client_id)
+    .maybeSingle();
 
   return (
     <div className="container max-w-5xl py-10 md:py-14">
@@ -243,6 +251,11 @@ export default async function JobDetailPage({
                   ) : null}
                 </span>
               </Link>
+              <RatingSummary
+                avg={clientStats?.rating_avg ?? null}
+                count={clientStats?.rating_count ?? null}
+                className="mt-3"
+              />
             </div>
           ) : null}
         </aside>

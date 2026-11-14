@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { SERVICE_MEDIA_BUCKET, IMAGE_TYPES, isOwnObjectPath } from "@/lib/storage";
+import {
+  SERVICE_MEDIA_BUCKET,
+  IMAGE_TYPES,
+  isOwnObjectPath,
+} from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formDataToObject } from "@/lib/validation/common";
 import {
@@ -37,20 +41,31 @@ export async function createServiceAction(
   });
   if (!parsed.success) return validationFailed(parsed.error, raw);
   if (!coverIsValid(guard.value.user.id, parsed.data.coverImagePath)) {
-    return fail({ code: "VALIDATION_ERROR", reason: "INVALID_COVER_PATH", message: messageFor("VALIDATION_ERROR", "INVALID_COVER_PATH") }, raw);
+    return fail(
+      {
+        code: "VALIDATION_ERROR",
+        reason: "INVALID_COVER_PATH",
+        message: messageFor("VALIDATION_ERROR", "INVALID_COVER_PATH"),
+      },
+      raw,
+    );
   }
   const supabase = await createClient();
-  const { data, error } = await supabase.from("services").insert({
-    freelancer_id: guard.value.user.id,
-    category_id: parsed.data.categoryId,
-    title: parsed.data.title,
-    description: parsed.data.description,
-    price: parsed.data.price,
-    delivery_days: parsed.data.deliveryDays,
-    revisions_included: parsed.data.revisionsIncluded,
-    requirements_prompt: parsed.data.requirementsPrompt,
-    cover_image_path: parsed.data.coverImagePath,
-  }).select("id").single();
+  const { data, error } = await supabase
+    .from("services")
+    .insert({
+      freelancer_id: guard.value.user.id,
+      category_id: parsed.data.categoryId,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      price: parsed.data.price,
+      delivery_days: parsed.data.deliveryDays,
+      revisions_included: parsed.data.revisionsIncluded,
+      requirements_prompt: parsed.data.requirementsPrompt,
+      cover_image_path: parsed.data.coverImagePath,
+    })
+    .select("id")
+    .single();
   if (error) return fail(mapPostgresError(error), raw);
   revalidatePath("/dashboard/services");
   return ok({ serviceId: data.id }, "Layanan berhasil disimpan sebagai draf.");
@@ -64,23 +79,39 @@ export async function updateServiceAction(
   if (!guard.ok) return guard.result;
   const raw = formDataToObject(formData);
   const idParsed = serviceIdSchema.safeParse(raw);
-  const parsed = serviceSchema.safeParse({ ...raw, coverImagePath: raw.coverImagePath || null });
+  const parsed = serviceSchema.safeParse({
+    ...raw,
+    coverImagePath: raw.coverImagePath || null,
+  });
   if (!idParsed.success) return validationFailed(idParsed.error, raw);
   if (!parsed.success) return validationFailed(parsed.error, raw);
   if (!coverIsValid(guard.value.user.id, parsed.data.coverImagePath)) {
-    return fail({ code: "VALIDATION_ERROR", reason: "INVALID_COVER_PATH", message: messageFor("VALIDATION_ERROR", "INVALID_COVER_PATH") }, raw);
+    return fail(
+      {
+        code: "VALIDATION_ERROR",
+        reason: "INVALID_COVER_PATH",
+        message: messageFor("VALIDATION_ERROR", "INVALID_COVER_PATH"),
+      },
+      raw,
+    );
   }
   const supabase = await createClient();
-  const { data, error } = await supabase.from("services").update({
-    category_id: parsed.data.categoryId,
-    title: parsed.data.title,
-    description: parsed.data.description,
-    price: parsed.data.price,
-    delivery_days: parsed.data.deliveryDays,
-    revisions_included: parsed.data.revisionsIncluded,
-    requirements_prompt: parsed.data.requirementsPrompt,
-    cover_image_path: parsed.data.coverImagePath,
-  }).eq("id", idParsed.data.id).eq("freelancer_id", guard.value.user.id).select("id").single();
+  const { data, error } = await supabase
+    .from("services")
+    .update({
+      category_id: parsed.data.categoryId,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      price: parsed.data.price,
+      delivery_days: parsed.data.deliveryDays,
+      revisions_included: parsed.data.revisionsIncluded,
+      requirements_prompt: parsed.data.requirementsPrompt,
+      cover_image_path: parsed.data.coverImagePath,
+    })
+    .eq("id", idParsed.data.id)
+    .eq("freelancer_id", guard.value.user.id)
+    .select("id")
+    .single();
   if (error) return fail(mapPostgresError(error), raw);
   revalidatePath("/dashboard/services");
   revalidatePath(`/services/${data.id}`);
@@ -94,7 +125,9 @@ export async function setServiceStatusAction(input: {
 }): Promise<ActionResult> {
   const guard = await guardOnboarded();
   if (!guard.ok) return guard.result;
-  const parsed = serviceIdSchema.extend({ status: serviceStatusSchema }).safeParse(input);
+  const parsed = serviceIdSchema
+    .extend({ status: serviceStatusSchema })
+    .safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_service_status", {
@@ -105,17 +138,37 @@ export async function setServiceStatusAction(input: {
   revalidatePath("/dashboard/services");
   revalidatePath("/services");
   revalidatePath(`/services/${parsed.data.id}`);
-  return ok(null, parsed.data.status === "published" ? "Layanan dipublikasikan." : "Status layanan diperbarui.");
+  return ok(
+    null,
+    parsed.data.status === "published"
+      ? "Layanan dipublikasikan."
+      : "Status layanan diperbarui.",
+  );
 }
 
-export async function deleteServiceAction(input: { id: string }): Promise<ActionResult> {
+export async function deleteServiceAction(input: {
+  id: string;
+}): Promise<ActionResult> {
   const guard = await guardOnboarded();
   if (!guard.ok) return guard.result;
   const parsed = serviceIdSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const supabase = await createClient();
-  const { error } = await supabase.from("services").delete().eq("id", parsed.data.id).eq("freelancer_id", guard.value.user.id);
+  const { data, error } = await supabase
+    .from("services")
+    .delete()
+    .eq("id", parsed.data.id)
+    .eq("freelancer_id", guard.value.user.id)
+    .select("id");
   if (error) return fail(mapPostgresError(error));
+  // RLS deletes drafts only; zero rows means it is not (or no longer) a draft.
+  if (!data || data.length === 0) {
+    return fail({
+      code: "INVALID_STATE",
+      reason: "NOT_DRAFT",
+      message: messageFor("INVALID_STATE", "NOT_DRAFT"),
+    });
+  }
   revalidatePath("/dashboard/services");
   return ok(null, "Draf layanan dihapus.");
 }

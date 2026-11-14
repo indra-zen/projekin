@@ -51,6 +51,15 @@ export function formatBudgetRange(min: number, max: number): string {
   return min === max ? formatIdr(min) : `${formatIdr(min)} – ${formatIdr(max)}`;
 }
 
+/** BR-22: reviews are accepted for 14 days after completion (create_order_review). */
+export function reviewWindowOpen(
+  completedAt: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (!completedAt) return false;
+  return now.getTime() <= new Date(completedAt).getTime() + 14 * 24 * 3_600_000;
+}
+
 /** Payment can start until 5 minutes before the deadline (create_payment_attempt). */
 export function paymentWindowOpen(
   paymentDueAt: string,

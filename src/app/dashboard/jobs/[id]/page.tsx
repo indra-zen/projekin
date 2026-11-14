@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { CloseJobForm, ProposalDecision } from "@/components/jobs/job-forms";
 import { StatusBadge } from "@/components/jobs/status-badge";
 import { UserAvatar } from "@/components/profile/user-avatar";
+import { RatingSummary } from "@/components/reviews/review-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VerifiedStudentBadge } from "@/components/verification/verification-badge";
@@ -49,7 +50,7 @@ export default async function ManageJobPage({
     supabase
       .from("proposals")
       .select(
-        "id, cover_letter, price, delivery_days, revisions_included, status, status_reason, created_at, freelancer:freelancer_profiles(headline, status, verified_until, university:universities(short_name, name), profile:profiles(username, full_name, avatar_path))",
+        "id, freelancer_id, cover_letter, price, delivery_days, revisions_included, status, status_reason, created_at, freelancer:freelancer_profiles(headline, status, verified_until, university:universities(short_name, name), profile:profiles(username, full_name, avatar_path))",
       )
       .eq("job_id", job.id)
       .order("created_at", { ascending: true }),
@@ -62,6 +63,20 @@ export default async function ManageJobPage({
   ]);
   const liveOrder = orders?.[0];
   const editable = job.status === "open" && (proposals?.length ?? 0) === 0;
+  // FR-PROP-03: each freelancer's rating next to their proposal.
+  const freelancerIds = [
+    ...new Set((proposals ?? []).map((p) => p.freelancer_id)),
+  ];
+  const { data: ratings } =
+    freelancerIds.length > 0
+      ? await supabase
+          .from("freelancer_rating_stats")
+          .select("user_id, rating_avg, rating_count")
+          .in("user_id", freelancerIds)
+      : { data: [] };
+  const ratingByFreelancer = new Map(
+    (ratings ?? []).map((r) => [r.user_id, r] as const),
+  );
 
   return (
     <div className="space-y-6">
@@ -188,7 +203,7 @@ export default async function ManageJobPage({
                         className="self-start"
                       />
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                       {isVerifiedStudent(p.freelancer) ? (
                         <VerifiedStudentBadge
                           university={
@@ -197,6 +212,16 @@ export default async function ManageJobPage({
                           }
                         />
                       ) : null}
+                      <RatingSummary
+                        avg={
+                          ratingByFreelancer.get(p.freelancer_id)?.rating_avg ??
+                          null
+                        }
+                        count={
+                          ratingByFreelancer.get(p.freelancer_id)
+                            ?.rating_count ?? null
+                        }
+                      />
                     </div>
                     <p className="mt-3 text-sm">
                       <strong>{formatIdr(p.price)}</strong> · {p.delivery_days}{" "}

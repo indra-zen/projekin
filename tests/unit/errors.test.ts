@@ -34,6 +34,18 @@ describe("mapPostgresError", () => {
     expect(mapped.message).toBe(reasonMessages.USERNAME_TAKEN);
   });
 
+  it.each([
+    ["reviews_one_per_reviewer", "ALREADY_REVIEWED"],
+    ["disputes_order_id_key", "DISPUTE_EXISTS"],
+  ])("maps a concurrent duplicate on %s to %s", (constraint, reason) => {
+    const mapped = mapPostgresError({
+      code: "23505",
+      message: `duplicate key value violates unique constraint "${constraint}"`,
+    });
+    expect(mapped).toMatchObject({ code: "CONFLICT", reason });
+    expect(mapped.message).toBe(reasonMessages[reason]);
+  });
+
   it("never exposes raw database messages", () => {
     const mapped = mapPostgresError({
       code: "XX000",

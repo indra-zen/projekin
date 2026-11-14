@@ -1085,6 +1085,38 @@ export type Database = {
       }
     }
     Views: {
+      client_rating_stats: {
+        Row: {
+          rating_avg: number | null
+          rating_count: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freelancer_rating_stats: {
+        Row: {
+          rating_avg: number | null
+          rating_count: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_listings: {
         Row: {
           category_id: string | null
@@ -1103,6 +1135,8 @@ export type Database = {
           id: string | null
           price: number | null
           published_at: string | null
+          rating_avg: number | null
+          rating_count: number | null
           requirements_prompt: string | null
           revisions_included: number | null
           title: string | null
@@ -1124,6 +1158,29 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "freelancer_profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      service_rating_stats: {
+        Row: {
+          rating_avg: number | null
+          rating_count: number | null
+          service_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
           },
         ]
       }

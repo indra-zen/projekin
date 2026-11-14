@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useActionState } from "react";
 import {
   Field,
@@ -133,7 +133,11 @@ export function DeliverOrderForm({ orderId }: { orderId: string }) {
     <form action={action} className="space-y-3" noValidate>
       <FormAlert state={state} />
       <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="attachmentPaths" value={JSON.stringify(paths)} />
+      <input
+        type="hidden"
+        name="attachmentPaths"
+        value={JSON.stringify(paths)}
+      />
       <Field
         label="Kirim hasil kerja"
         htmlFor={`deliver-${orderId}`}
@@ -181,7 +185,12 @@ export function DeliverOrderForm({ orderId }: { orderId: string }) {
                 setUploadError("Ukuran setiap lampiran maksimal 25 MB.");
                 break;
               }
-              const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+              // API_CONTRACT §2.1: lower-case, [a-z0-9._-] only, max 80 chars.
+              const safeName =
+                file.name
+                  .toLowerCase()
+                  .replace(/[^a-z0-9._-]/g, "-")
+                  .slice(-80) || "lampiran";
               const path = `${orderId}/${data.user.id}/${crypto.randomUUID()}-${safeName}`;
               const result = await supabase.storage
                 .from("order-files")
@@ -204,12 +213,14 @@ export function DeliverOrderForm({ orderId }: { orderId: string }) {
           <ul className="text-muted-foreground space-y-1 text-xs">
             {paths.map((path) => (
               <li key={path} className="truncate">
-                {path.split("/").at(-1)}
+                {attachmentName(path)}
               </li>
             ))}
           </ul>
         ) : null}
-        {uploadError ? <p className="text-destructive text-xs">{uploadError}</p> : null}
+        {uploadError ? (
+          <p className="text-destructive text-xs">{uploadError}</p>
+        ) : null}
       </div>
       <SubmitButton pendingLabel="Mengirim…">Kirim hasil kerja</SubmitButton>
     </form>
@@ -243,42 +254,59 @@ export function OrderMessageForm({ orderId }: { orderId: string }) {
   );
 }
 
-export function DeliveryAttachments({ paths }: { paths: string[] }) {
-  const [urls, setUrls] = useState<{ name: string; url: string }[]>([]);
-  useEffect(() => {
-    let active = true;
-    void Promise.all(
-      paths.map(async (path) => {
-        const { data } = await createClient()
-          .storage.from("order-files")
-          .createSignedUrl(path, 60 * 60);
-        return data?.signedUrl
-          ? { name: path.split("/").at(-1) ?? "Lampiran", url: data.signedUrl }
-          : null;
-      }),
-    ).then((items) => {
-      if (active) setUrls(items.filter((item): item is NonNullable<typeof item> => item !== null));
-    });
-    return () => {
-      active = false;
-    };
-  }, [paths]);
-  if (urls.length === 0) return null;
+/** `{orderId}/{uid}/{uuid}-{name}` → `{name}`. */
+export function attachmentName(path: string): string {
+  const file = path.split("/").at(-1) ?? "";
   return (
-    <ul className="mt-2 space-y-1 text-sm">
-      {urls.map((item) => (
-        <li key={item.url}>
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary hover:underline"
-          >
-            Unduh {item.name}
-          </a>
-        </li>
-      ))}
-    </ul>
+    file.replace(/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}-/, "") ||
+    "lampiran"
+  );
+}
+
+/**
+ * FR-ORD-09: each download gets a fresh 60-second signed URL, created with the
+ * viewer's own session (the order-files policy admits only the two parties
+ * and admins) and served as an attachment, never rendered inline.
+ */
+export function DeliveryAttachments({ paths }: { paths: string[] }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (paths.length === 0) return null;
+
+  async function download(path: string) {
+    setBusy(true);
+    setError(null);
+    const { data } = await createClient()
+      .storage.from("order-files")
+      .createSignedUrl(path, 60, { download: attachmentName(path) });
+    setBusy(false);
+    if (!data?.signedUrl) {
+      setError(
+        "Lampiran tidak dapat diunduh. Muat ulang halaman lalu coba lagi.",
+      );
+      return;
+    }
+    window.location.assign(data.signedUrl);
+  }
+
+  return (
+    <div className="mt-2 space-y-1">
+      <ul className="space-y-1 text-sm">
+        {paths.map((path) => (
+          <li key={path}>
+            <button
+              type="button"
+              onClick={() => void download(path)}
+              disabled={busy}
+              className="text-primary text-left break-all hover:underline disabled:opacity-60"
+            >
+              Unduh {attachmentName(path)}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {error ? <p className="text-destructive text-xs">{error}</p> : null}
+    </div>
   );
 }
 

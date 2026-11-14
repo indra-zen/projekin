@@ -22,6 +22,7 @@ import {
   formatIdr,
   formatOrderCode,
   paymentWindowOpen,
+  reviewWindowOpen,
 } from "@/lib/format";
 import {
   cancellationReasonLabels,
@@ -65,44 +66,47 @@ export default async function OrderDetailPage({
     { data: messages },
     { data: disputes },
     { data: reviews },
-  ] =
-    await Promise.all([
-      supabase
-        .from("order_events")
-        .select("id, event_type, created_at")
-        .eq("order_id", order.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("order_deliveries")
-        .select("id, delivery_number, message, attachment_paths, created_at")
-        .eq("order_id", order.id)
-        .order("delivery_number", { ascending: false }),
-      // RLS: the client and admins see payments; the freelancer gets none.
-      supabase
-        .from("payments")
-        .select(
-          "id, attempt_no, midtrans_order_id, status, payment_type, gross_amount, paid_at, created_at, refund_status",
-        )
-        .eq("order_id", order.id)
-        .order("attempt_no", { ascending: false }),
-      supabase
-        .from("order_messages")
-        .select("id, sender_id, body, created_at")
-        .eq("order_id", order.id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("disputes")
-        .select("id, opened_by, reason, status, resolution, admin_note, created_at")
-        .eq("order_id", order.id)
-        .maybeSingle(),
-      supabase
-        .from("reviews")
-        .select("id, reviewer_id, reviewer_role, rating, comment, created_at")
-        .eq("order_id", order.id),
-    ]);
+  ] = await Promise.all([
+    supabase
+      .from("order_events")
+      .select("id, event_type, created_at")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("order_deliveries")
+      .select("id, delivery_number, message, attachment_paths, created_at")
+      .eq("order_id", order.id)
+      .order("delivery_number", { ascending: false }),
+    // RLS: the client and admins see payments; the freelancer gets none.
+    supabase
+      .from("payments")
+      .select(
+        "id, attempt_no, midtrans_order_id, status, payment_type, gross_amount, paid_at, created_at, refund_status",
+      )
+      .eq("order_id", order.id)
+      .order("attempt_no", { ascending: false }),
+    supabase
+      .from("order_messages")
+      .select("id, sender_id, body, created_at")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("disputes")
+      .select(
+        "id, opened_by, reason, status, resolution, admin_note, created_at",
+      )
+      .eq("order_id", order.id)
+      .maybeSingle(),
+    supabase
+      .from("reviews")
+      .select("id, reviewer_id, reviewer_role, rating, comment, created_at")
+      .eq("order_id", order.id),
+  ]);
 
   const isClient = viewer.user.id === order.client_id;
   const isFreelancer = viewer.user.id === order.freelancer_id;
+  // Admins can open any order (RLS); participant-only actions stay hidden.
+  const isParticipant = isClient || isFreelancer;
   const counterpart = isClient ? order.freelancer?.profile : order.client;
   const attempts = payments ?? [];
   const liveAttempt = attempts.find(
@@ -111,7 +115,9 @@ export default async function OrderDetailPage({
   const refundPending = attempts.some((p) => p.refund_status === "pending");
   const deliveryList = deliveries ?? [];
   const latestDelivery = deliveryList[0];
-  const ownReview = (reviews ?? []).some((review) => review.reviewer_id === viewer.user.id);
+  const ownReview = (reviews ?? []).some(
+    (review) => review.reviewer_id === viewer.user.id,
+  );
 
   const awaitingPayment = order.status === "awaiting_payment";
   const canCancel =
@@ -119,6 +125,29 @@ export default async function OrderDetailPage({
     (order.status === "in_progress" &&
       isFreelancer &&
       deliveryList.length === 0);
+  // BR-21: either party, while in progress or delivered.
+  const canDispute =
+    isParticipant &&
+    (order.status === "in_progress" || order.status === "delivered");
+  // BR-29: the thread accepts messages only in these states (admins may post).
+  const messagesOpen =
+    order.status === "in_progress" ||
+    order.status === "delivered" ||
+    order.status === "disputed";
+  // BR-22: each party reviews once, within 14 days of completion.
+  const canReview =
+    isParticipant &&
+    !ownReview &&
+    order.status === "completed" &&
+    reviewWindowOpen(order.completed_at);
+  const senderLabel = (senderId: string) =>
+    senderId === viewer.user.id
+      ? "Anda"
+      : senderId === order.client_id
+        ? "Klien"
+        : senderId === order.freelancer_id
+          ? "Freelancer"
+          : "Admin";
 
   return (
     <div className="space-y-6">
@@ -233,7 +262,6 @@ export default async function OrderDetailPage({
               <div className="space-y-3">
                 <CompleteOrderForm orderId={order.id} />
                 <RevisionRequestForm orderId={order.id} />
-                <DisputeForm orderId={order.id} />
               </div>
             ) : (
               <p className="text-muted-foreground">
@@ -286,14 +314,18 @@ export default async function OrderDetailPage({
                 {refundStatusLabels.pending}.
               </p>
             ) : null}
-
           </CardContent>
         </Card>
       ) : null}
 
-      {order.status === "in_progress" && !isFreelancer ? (
+      {canDispute ? (
         <Card className="rounded-2xl">
-          <CardContent className="pt-6">
+          <CardContent className="space-y-3 pt-6 text-sm">
+            <p className="text-muted-foreground">
+              Ada masalah yang tidak dapat diselesaikan lewat pesan? Admin akan
+              meninjau sengketa dan memutuskan apakah dana diteruskan ke
+              freelancer atau dikembalikan ke klien.
+            </p>
             <DisputeForm orderId={order.id} />
           </CardContent>
         </Card>
@@ -307,14 +339,15 @@ export default async function OrderDetailPage({
           <CardContent className="space-y-2 text-sm">
             <p className="whitespace-pre-wrap">{disputes.reason}</p>
             <p className="text-muted-foreground">
-              Dibuka {formatDateTime(disputes.created_at)}. Admin akan menentukan
-              apakah dana diteruskan ke freelancer atau dikembalikan ke klien.
+              Dibuka {formatDateTime(disputes.created_at)}. Admin akan
+              menentukan apakah dana diteruskan ke freelancer atau dikembalikan
+              ke klien.
             </p>
           </CardContent>
         </Card>
       ) : null}
 
-      {order.status === "completed" && !ownReview ? (
+      {canReview ? (
         <Card className="border-primary/30 rounded-2xl">
           <CardHeader>
             <CardTitle className="text-lg">Bagikan pengalaman Anda</CardTitle>
@@ -341,7 +374,9 @@ export default async function OrderDetailPage({
                   <p className="leading-6 whitespace-pre-wrap">
                     {delivery.message}
                   </p>
-                  <DeliveryAttachments paths={delivery.attachment_paths ?? []} />
+                  <DeliveryAttachments
+                    paths={delivery.attachment_paths ?? []}
+                  />
                 </li>
               ))}
             </ol>
@@ -367,20 +402,29 @@ export default async function OrderDetailPage({
                     }`}
                   >
                     <p className="text-muted-foreground mb-1 text-xs">
-                      {message.sender_id === viewer.user.id ? "Anda" : "Pihak lain"} ·{" "}
+                      {senderLabel(message.sender_id)} ·{" "}
                       {formatDateTime(message.created_at)}
                     </p>
-                    <p className="whitespace-pre-wrap">{message.body}</p>
+                    <p className="break-words whitespace-pre-wrap">
+                      {message.body}
+                    </p>
                   </li>
                 ))}
               </ol>
             ) : (
               <p className="text-muted-foreground text-sm">
-                Belum ada pesan. Gunakan ruang ini untuk menyepakati detail
-                pengerjaan.
+                {messagesOpen
+                  ? "Belum ada pesan. Gunakan ruang ini untuk menyepakati detail pengerjaan."
+                  : "Tidak ada pesan pada pesanan ini."}
               </p>
             )}
-            <OrderMessageForm orderId={order.id} />
+            {messagesOpen ? (
+              <OrderMessageForm orderId={order.id} />
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Ruang pesan ditutup setelah pesanan selesai.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : null}

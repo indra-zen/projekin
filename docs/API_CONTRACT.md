@@ -176,6 +176,9 @@ The identity actions are implemented in `src/server/actions/*.ts`. Exported name
 | `cancelOrder` | `cancelOrderAction` (`orders.ts`) | Full BR-20. Expires the returned live attempts at Midtrans (best effort). |
 | `createServiceOrder` / `deliverOrder` / `completeOrder` | `createServiceOrderAction` / `deliverOrderAction` / `completeOrderAction` (`orders.ts`) | Create redirects to `/dashboard/orders/{orderId}`. `deliverOrder` accepts up to 10 validated paths from the private `order-files` bucket. |
 | `startPayment` / `syncPaymentStatus` | `startPaymentAction({ orderId })` / `syncPaymentStatusAction({ orderId })` (`payments.ts`) | Both return `ActionResult` (not form state); called from `PaymentPanel`. |
+| `sendOrderMessage` / `requestRevision` / `openDispute` / `submitReview` | `sendOrderMessageAction` / `requestOrderRevisionAction` / `openOrderDisputeAction` / `createOrderReviewAction` (`orders.ts`) | RPCs `send_order_message` (parties or admin, BR-29), `request_order_revision` (`reason` 10–2.000), `open_order_dispute` (either party), `create_order_review`. |
+| `getOrderFileUrl` | — (not an action) | `DeliveryAttachments` creates a 60-second signed URL with `download` disposition when the user clicks, with the viewer's own session (the `order-files` policy admits the parties and admins). |
+| `deleteService` | `deleteServiceAction({ id })` (`services.ts`) | Zero deleted rows → `INVALID_STATE`/`NOT_DRAFT` (§1.5). |
 
 Server-side guards live in `src/server/auth.ts` (`guardUser`, `guardOnboarded`, `guardAdmin`, `guardVerifiedFreelancer`). The last one is used by service and proposal actions when those phases arrive.
 
@@ -323,6 +326,8 @@ export const ordersFilter = z.object({
 ```
 
 Invalid params fall back to their defaults (`safeParse`). They never produce an error page. Page size is 20. Keyword search uses `.textSearch('search', q, { type: 'websearch', config: 'simple' })`.
+
+As implemented: `parseServicesSearch` (`src/lib/validation/service.ts`) and `parseJobsSearch` (`src/lib/validation/job.ts`). `/services` matches the sanitized keyword with `ilike` on title and description (the view has no `search` column) and sorts by `published_at` (newest), price or `rating_avg`. A page past the end (PostgREST `PGRST103`) renders as an empty result.
 
 ### 5.2 Page data
 

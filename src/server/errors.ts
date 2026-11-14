@@ -22,6 +22,8 @@ const CONFLICT_REASONS = new Set([
 const CONSTRAINT_REASONS: Record<string, string> = {
   profiles_username_key: "USERNAME_TAKEN",
   student_verifications_one_pending_per_user: "VERIFICATION_PENDING",
+  reviews_one_per_reviewer: "ALREADY_REVIEWED",
+  disputes_order_id_key: "DISPUTE_EXISTS",
 };
 
 function build(code: ErrorCode, reason?: string): ActionError {
