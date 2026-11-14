@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// No `new Function` probe in the browser: keeps the CSP free of 'unsafe-eval'
+// (see src/lib/validation/zod.ts). Must run before the schema below is built.
+z.config({ jitless: true });
+
 /**
  * Public (browser-safe) environment. Only NEXT_PUBLIC_* values belong here.
  * Server secrets (e.g. SUPABASE_SECRET_KEY) must never be added to this module:

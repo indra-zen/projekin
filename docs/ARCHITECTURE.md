@@ -390,7 +390,7 @@ This makes payments work in local development without a public webhook URL, and 
 ### 11.1 Error handling
 
 - Server Actions never throw to the client for expected failures. They return `ActionResult` ([API_CONTRACT §1.2](API_CONTRACT.md#12-result-envelope)). Unexpected errors are logged and returned as `INTERNAL_ERROR` with a correlation ID.
-- `error.tsx` and `not-found.tsx` exist at the root, under `dashboard/` and under `admin/`.
+- `error.tsx` and `not-found.tsx` exist at the root, under `dashboard/` and under `admin/`. Implemented (2026-11-14) with shared `ErrorView` / `NotFoundView` components: Indonesian copy, a "Coba lagi" button calling Next's `retry()`, and the error `digest` shown as a support code (it matches the server log line; the raw message is never shown). The dashboard and admin boundaries keep their navigation. `global-error.tsx` covers failures in the root layout itself (for example the header failing to read the session) and imports the stylesheet itself. A non-admin opening `/admin` still gets the root 404, because the admin layout's `notFound()` is caught above the admin segment.
 
 ### 11.2 Logging
 
@@ -430,6 +430,7 @@ Rendered as plain text (`whitespace-pre-wrap`), never through `dangerouslySetInn
 
 - `Strict-Transport-Security` (Vercel default on custom domains), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 - `Content-Security-Policy`: `frame-ancestors 'none'` from day one. The full CSP (script, frame and connect sources for Snap and Supabase) ships **Report-Only** first in Phase 10 and is tuned against the origins Snap actually loads in sandbox, then enforced.
+- Report-Only (2026-11-14, Phase 10, `contentSecurityPolicy()` in `next.config.ts`): `default-src 'self'; script-src 'self' 'unsafe-inline' https://app.sandbox.midtrans.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: <supabase>; font-src 'self' data:; connect-src 'self' <supabase>; frame-src https://app.sandbox.midtrans.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` (development adds `'unsafe-eval'` and `ws:`/`wss:` for Fast Refresh). An audit of every page for every role plus a Snap popup found no violations; our own document only contacts Snap's script origin and the Supabase project, while Snap's own third-party traffic (captcha, fonts, telemetry) runs inside its cross-origin iframe under Midtrans's policy. Zod is configured `jitless` (`src/lib/validation/zod.ts`, `src/lib/env.ts`) so no `'unsafe-eval'` is needed. Enforcement follows one real upload and payment on the deployed site (IMPLEMENTATION_PLAN §0.2).
 - Implemented (2026-11-14, `next.config.ts`): `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` on every route, and `poweredByHeader: false`. Until then the app sent none of these.
 
 ### 12.2 Risk register
@@ -472,13 +473,14 @@ L = likelihood, I = impact (H/M/L).
 - List pages paginate with offset (20 per page) in the MVP. Switch to keyset pagination if volume grows.
 - `private.is_eligible_freelancer()` in the `services` SELECT policy runs per row. That is acceptable at MVP volume. If needed, denormalise `freelancer_eligible_until` onto `services` later.
 - Snap.js loads only on order pages with a pay button (`next/script`, `lazyOnload`).
+- Server functions run in Vercel's `sin1` (Singapore), set in `vercel.json`, next to the Supabase project in `ap-southeast-1`. The default `iad1` added a trans-Pacific round trip to every query (signed-in pages took 2–3.4 s, 2026-11-14).
 
 ---
 
 ## 14. Deployment
 
 1. **Supabase (per environment):** create the project → `supabase link` → `supabase db push` (migrations, including the reference-data migration for categories and universities; they also enable `pg_cron` and schedule `expire-unpaid-orders` and `auto-complete-delivered-orders`, so check `select jobname, schedule from cron.job`) → configure Auth (site URL, redirect URLs, email templates pointing at `/auth/confirm`, SMTP) → create the first admin with SQL (`insert into admin_users`).
-2. **Vercel:** import the repo → set env vars per environment (§4.1) → set `CRON_SECRET` → deploy. `vercel.json` registers the cron.
+2. **Vercel:** import the repo → set env vars per environment (§4.1) → set `CRON_SECRET` → deploy. `vercel.json` registers the cron and pins functions to `sin1`; if the Supabase project moves to another region, change `regions` to the nearest Vercel region.
 3. **Midtrans Sandbox dashboard:** copy the Server and Client keys → set the Payment Notification URL to production → (optional) set the Finish redirect URL (we also send `callbacks.finish` per transaction).
 4. **Release gate:** CI green (`quality`: lint, typecheck, unit, component and PGlite DB tests, build; `migrations`: every migration applied to a real Supabase stack) → manual sandbox smoke test ([IMPLEMENTATION_PLAN §4.6](IMPLEMENTATION_PLAN.md#46-manual-sandbox-qa-checklist)).
 
