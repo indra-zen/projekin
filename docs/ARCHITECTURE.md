@@ -64,7 +64,7 @@ flowchart LR
 | Runtime | Node.js 24 LTS | Matches the dev container |
 | Framework | Next.js App Router, latest stable at scaffold time (16.x+) | Exact version pinned in `package.json`. Session refresh lives in `proxy.ts` (called `middleware.ts` before Next 16). |
 | Language | TypeScript, `strict: true`, `noUncheckedIndexedAccess: true` | No `any` without a justification comment |
-| UI | Tailwind CSS v4, shadcn/ui (Radix primitives), lucide-react icons, sonner toasts | Copy in Bahasa Indonesia (§11.6) |
+| UI | Tailwind CSS v4, shadcn/ui (Radix primitives), lucide-react icons, sonner toasts | Copy in Bahasa Indonesia (§11.6). Visual language: Neo-Brutalism, with tokens, components and rules in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) (2026-11-14) |
 | Forms | Server Actions with React `useActionState`, native form controls | **Decision (2026-11-13):** no react-hook-form. Zod schemas in `src/lib/validation` are the single validation layer (server-side) and return Indonesian field errors. Forms work without client JS. |
 | Validation | Zod | `src/lib/validation/*` |
 | Data | `@supabase/supabase-js`, `@supabase/ssr` | Generated types `src/types/database.ts` |
