@@ -62,9 +62,8 @@ export function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
               className="text-foreground shrink-0"
             >
               {"★".repeat(review.rating)}
-              <span className="text-foreground/25">
-                {"★".repeat(Math.max(0, 5 - review.rating))}
-              </span>
+              {/* Empty stars differ by shape, not by a faint colour. */}
+              {"☆".repeat(Math.max(0, 5 - review.rating))}
             </span>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">

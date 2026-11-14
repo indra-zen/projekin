@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Approved by the product owner (2026-11-14); implementation in progress on `feature/neo-brutal-ui` |
+| Status | Approved by the product owner (2026-11-14); implemented on `feature/neo-brutal-ui` (phases 0–7 done) |
 | Version | 1.0 (2026-11-14) |
 | Related | [ARCHITECTURE.md §3](ARCHITECTURE.md#3-technology-stack), [IMPLEMENTATION_PLAN.md §0](IMPLEMENTATION_PLAN.md#0-implementation-status), [PRD.md NFR-06](PRD.md) |
 | References | [`design-references/`](design-references/) — `reference-2.png` is the **primary** inspiration; `reference-1.png` and `reference-3.png` are secondary |
@@ -205,7 +205,7 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 | 4 | Public pages | Landing, `/services`, `/jobs`, `/u/[username]`, plus the detail pages `/services/[id]`, `/services/[id]/order`, `/jobs/[id]` | Done (2026-11-14) |
 | 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; feature forms; all selects now `NativeSelect` | Done (2026-11-14) |
 | 6 | Admin | All `/admin` pages and admin forms | Done (2026-11-14) |
-| 7 | QA and handoff | Keyboard/focus pass, contrast check, reduced motion, 360 px sweep, docs, completion report | — |
+| 7 | QA and handoff | Keyboard/focus pass, contrast check, reduced motion, 360 px sweep, docs, completion report | Done (2026-11-14) |
 
 ### 8.1 Guardrails
 
@@ -250,3 +250,12 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 - `Input type="file"`: the picker button is a small highlight sticker (in `ui/input.tsx`), so every upload field matches.
 - `/jobs/[id]`: the budget and client panels come first on small screens.
 - Service status chips in `/dashboard/services` use a local tone map (published → success, paused → highlight, draft/archived → muted); `toneFor()` in `lib/labels.ts` was left unchanged.
+
+### 8.7 QA results (Phase 7)
+
+- **Overflow:** 35 routes (public, client, freelancer, admin, detail pages, empty states, 404) at 1280, 768 and 360 px: no horizontal overflow.
+- **Contrast:** an automated scan composited every visible text node's colour over its real background (including translucent layers) on 45 page renders. Two findings, both fixed: the pink dot in the wordmark (a logotype, now `aria-hidden`) and the empty review stars (now the outlined ☆ glyph in full ink instead of 25 % ink).
+- **Keyboard:** every tab stop checked (public pages, dashboard, service form, orders, admin) shows the 2 px primary outline.
+- **Motion:** with `prefers-reduced-motion: reduce`, transitions drop to 0.01 ms.
+- **404:** `src/app/not-found.tsx` replaces the English Next.js default with Indonesian copy in the design language.
+- **Not covered:** pagination with real multi-page data (the demo data fits on one page), the payment-awaiting and in-progress order states (no live orders in those states), and Snap's own popup (third-party iframe, unstyled by design).

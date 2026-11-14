@@ -11,7 +11,10 @@ export function Brand() {
         P
       </span>
       <span className="font-display text-foreground text-xl font-extrabold tracking-tight">
-        projekin<span className="text-accent">.</span>
+        projekin
+        <span aria-hidden className="text-accent">
+          .
+        </span>
       </span>
     </Link>
   );
