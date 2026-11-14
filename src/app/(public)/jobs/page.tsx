@@ -1,10 +1,17 @@
-import { CalendarDays, Search } from "lucide-react";
+import { CalendarDays, Search, SearchX } from "lucide-react";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { Pagination } from "@/components/pagination";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { formatBudgetRange, formatDate } from "@/lib/format";
+import { ledgeAt } from "@/lib/ledge";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import {
   parseJobsSearch,
   sanitizeSearchTerm,
@@ -14,8 +21,6 @@ import {
 export const metadata: Metadata = { title: "Cari pekerjaan" };
 
 const PAGE_SIZE = 20;
-const fieldClass =
-  "border-input h-10 rounded-md border bg-transparent px-3 text-sm";
 
 function pageHref(search: JobsSearch, page: number): Route {
   const params = new URLSearchParams();
@@ -74,180 +79,194 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
   } = await query.range(from, from + PAGE_SIZE - 1);
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
+  const filtered = Boolean(
+    search.q ||
+    search.category ||
+    search.minBudget !== undefined ||
+    search.maxBudget !== undefined ||
+    search.sort !== "newest",
+  );
+  const failed = error !== null && error.code !== "PGRST103";
+
   return (
-    <div className="container py-12 md:py-16">
-      <div className="max-w-3xl">
-        <p className="text-primary text-sm font-bold tracking-widest uppercase">
-          Lowongan
-        </p>
-        <h1 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
-          Temukan proyek yang layak dikerjakan.
-        </h1>
-        <p className="text-muted-foreground mt-5 text-lg">
-          Kirim proposal ke pekerjaan dari klien, lalu bangun portofolio Anda.
-          Hanya mahasiswa terverifikasi yang dapat mengirim proposal.
-        </p>
-      </div>
-
-      <form
-        className="bg-card mt-10 grid gap-3 rounded-2xl border p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[1fr_180px_130px_130px_150px_auto]"
-        role="search"
+    <div>
+      <PageHeader
+        eyebrow="Lowongan"
+        title="Temukan proyek yang layak dikerjakan."
+        description="Kirim proposal ke pekerjaan dari klien, lalu bangun portofolio Anda. Hanya mahasiswa terverifikasi yang dapat mengirim proposal."
       >
-        <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
-          <Search className="text-muted-foreground size-5 shrink-0" />
-          <input
-            name="q"
-            defaultValue={search.q}
-            maxLength={100}
-            aria-label="Kata kunci"
-            className="h-10 w-full min-w-0 bg-transparent outline-none"
-            placeholder="Cari pekerjaan…"
-          />
-        </div>
-        <select
-          name="category"
-          defaultValue={search.category ?? ""}
-          aria-label="Kategori"
-          className={fieldClass}
+        <form
+          className="bg-card border-border shadow-hard grid gap-3 rounded-2xl border-2 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_170px_160px_160px_170px_auto]"
+          role="search"
         >
-          <option value="">Semua kategori</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input
-          name="minBudget"
-          type="number"
-          min={0}
-          step={1000}
-          defaultValue={search.minBudget}
-          aria-label="Anggaran minimum"
-          placeholder="Anggaran min"
-          className={fieldClass}
-        />
-        <input
-          name="maxBudget"
-          type="number"
-          min={0}
-          step={1000}
-          defaultValue={search.maxBudget}
-          aria-label="Anggaran maksimum"
-          placeholder="Anggaran maks"
-          className={fieldClass}
-        />
-        <select
-          name="sort"
-          defaultValue={search.sort}
-          aria-label="Urutkan"
-          className={fieldClass}
-        >
-          <option value="newest">Terbaru</option>
-          <option value="budget_desc">Anggaran tertinggi</option>
-        </select>
-        <Button type="submit" className="sm:col-span-2 lg:col-span-1">
-          Cari
-        </Button>
-      </form>
-
-      {/* PGRST103: a page past the end is an empty result, not a failure. */}
-      {error && error.code !== "PGRST103" ? (
-        <div className="bg-muted/40 mt-10 rounded-3xl border border-dashed py-20 text-center">
-          <h2 className="text-xl font-bold">Lowongan belum dapat dimuat</h2>
-          <p className="text-muted-foreground mt-2">
-            Coba muat ulang halaman beberapa saat lagi.
-          </p>
-        </div>
-      ) : jobs && jobs.length > 0 ? (
-        <>
-          <p className="text-muted-foreground mt-8 text-sm">
-            {count} lowongan ditemukan
-          </p>
-          <ul className="mt-4 grid gap-4">
-            {jobs.map((job) => (
-              <li key={job.id}>
-                <Link
-                  href={`/jobs/${job.id}` as Route}
-                  className="bg-card block rounded-2xl border p-5 transition-shadow hover:shadow-md sm:p-6"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 space-y-2">
-                      <p className="text-primary text-xs font-bold tracking-widest uppercase">
-                        {job.category?.name}
-                      </p>
-                      <h2 className="text-lg font-bold break-words">
-                        {job.title}
-                      </h2>
-                      <p className="text-muted-foreground line-clamp-2 text-sm">
-                        {job.description}
-                      </p>
-                    </div>
-                    <strong className="shrink-0 text-sm sm:text-base">
-                      {formatBudgetRange(job.budget_min, job.budget_max)}
-                    </strong>
-                  </div>
-                  <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                    {job.client ? (
-                      <span className="flex items-center gap-2">
-                        <UserAvatar
-                          path={job.client.avatar_path}
-                          name={job.client.full_name}
-                          username={job.client.username}
-                          className="size-6"
-                        />
-                        {job.client.full_name ?? `@${job.client.username}`}
-                      </span>
-                    ) : null}
-                    <span>Diposting {formatDate(job.created_at)}</span>
-                    {job.deadline ? (
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="size-3.5" /> Tenggat{" "}
-                        {formatDate(job.deadline)}
-                      </span>
-                    ) : null}
-                  </div>
-                </Link>
-              </li>
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2"
+              aria-hidden
+            />
+            <Input
+              name="q"
+              defaultValue={search.q}
+              maxLength={100}
+              aria-label="Kata kunci"
+              className="pl-10"
+              placeholder="Cari pekerjaan…"
+            />
+          </div>
+          <NativeSelect
+            name="category"
+            defaultValue={search.category ?? ""}
+            aria-label="Kategori"
+          >
+            <option value="">Semua kategori</option>
+            {categories?.map((c) => (
+              <option key={c.id} value={c.slug}>
+                {c.name}
+              </option>
             ))}
-          </ul>
-          {totalPages > 1 ? (
-            <nav
-              className="mt-8 flex items-center justify-between gap-3"
-              aria-label="Halaman"
-            >
-              {search.page > 1 ? (
-                <Button variant="outline" asChild>
-                  <Link href={pageHref(search, search.page - 1)}>
-                    Sebelumnya
+          </NativeSelect>
+          <Input
+            name="minBudget"
+            type="number"
+            min={0}
+            step={1000}
+            defaultValue={search.minBudget}
+            aria-label="Anggaran minimum"
+            placeholder="Anggaran min"
+          />
+          <Input
+            name="maxBudget"
+            type="number"
+            min={0}
+            step={1000}
+            defaultValue={search.maxBudget}
+            aria-label="Anggaran maksimum"
+            placeholder="Anggaran maks"
+          />
+          <NativeSelect
+            name="sort"
+            defaultValue={search.sort}
+            aria-label="Urutkan"
+          >
+            <option value="newest">Terbaru</option>
+            <option value="budget_desc">Anggaran tertinggi</option>
+          </NativeSelect>
+          <Button type="submit" className="sm:col-span-2 lg:col-span-1">
+            Cari
+          </Button>
+        </form>
+      </PageHeader>
+
+      <div className="container py-10 md:py-14">
+        {/* PGRST103: a page past the end is an empty result, not a failure. */}
+        {failed ? (
+          <EmptyState
+            icon={SearchX}
+            title="Lowongan belum dapat dimuat"
+            description="Coba muat ulang halaman beberapa saat lagi."
+          />
+        ) : jobs && jobs.length > 0 ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="font-bold">{count} lowongan ditemukan</p>
+              {filtered ? (
+                <Link
+                  href="/jobs"
+                  className="text-primary text-sm font-bold underline decoration-2 underline-offset-4"
+                >
+                  Atur ulang filter
+                </Link>
+              ) : null}
+            </div>
+            <ul className="mt-6 grid gap-y-8">
+              {jobs.map((job, index) => (
+                <li key={job.id}>
+                  <Link
+                    href={`/jobs/${job.id}` as Route}
+                    className={cn(
+                      "group bg-card border-border shadow-ledge block rounded-2xl border-2 p-5 transition-transform motion-safe:hover:-translate-y-1 motion-safe:focus-visible:-translate-y-1 sm:p-6",
+                      ledgeAt(index),
+                    )}
+                  >
+                    <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-8">
+                      <div className="min-w-0 space-y-3">
+                        {job.category?.name ? (
+                          <span className="sticker bg-highlight">
+                            {job.category.name}
+                          </span>
+                        ) : null}
+                        <h2 className="font-sans text-xl leading-snug font-bold break-words decoration-2 underline-offset-4 group-hover:underline">
+                          {job.title}
+                        </h2>
+                        <p className="text-muted-foreground line-clamp-2 text-sm leading-6">
+                          {job.description}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-3 sm:flex-row md:w-64 md:flex-col">
+                        <div className="bg-success border-border rounded-xl border-2 px-3 py-2 sm:flex-1">
+                          <p className="text-xs font-bold">Anggaran</p>
+                          <p className="font-display text-lg leading-tight font-extrabold">
+                            {formatBudgetRange(job.budget_min, job.budget_max)}
+                          </p>
+                        </div>
+                        {job.deadline ? (
+                          <div className="bg-secondary border-border rounded-xl border-2 px-3 py-2 sm:flex-1">
+                            <p className="flex items-center gap-1 text-xs font-bold">
+                              <CalendarDays className="size-3.5" aria-hidden />{" "}
+                              Tenggat
+                            </p>
+                            <p className="text-sm font-bold">
+                              {formatDate(job.deadline)}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="border-hairline text-muted-foreground mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4 text-xs">
+                      {job.client ? (
+                        <span className="text-foreground flex items-center gap-2 font-semibold">
+                          <UserAvatar
+                            path={job.client.avatar_path}
+                            name={job.client.full_name}
+                            username={job.client.username}
+                            className="size-7"
+                          />
+                          {job.client.full_name ?? `@${job.client.username}`}
+                        </span>
+                      ) : null}
+                      <span>Diposting {formatDate(job.created_at)}</span>
+                    </div>
                   </Link>
-                </Button>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Halaman {search.page} dari {totalPages}
-              </span>
-              {search.page < totalPages ? (
-                <Button variant="outline" asChild>
-                  <Link href={pageHref(search, search.page + 1)}>
-                    Berikutnya
-                  </Link>
-                </Button>
-              ) : (
-                <span />
-              )}
-            </nav>
-          ) : null}
-        </>
-      ) : (
-        <div className="bg-muted/40 mt-12 rounded-3xl border border-dashed py-20 text-center">
-          <h2 className="text-xl font-bold">Belum ada lowongan yang cocok</h2>
-          <p className="text-muted-foreground mt-2">
-            Coba ubah kata kunci atau filter Anda.
-          </p>
-        </div>
-      )}
+                </li>
+              ))}
+            </ul>
+            <Pagination
+              page={search.page}
+              totalPages={totalPages}
+              prevHref={
+                search.page > 1 ? pageHref(search, search.page - 1) : null
+              }
+              nextHref={
+                search.page < totalPages
+                  ? pageHref(search, search.page + 1)
+                  : null
+              }
+            />
+          </>
+        ) : (
+          <EmptyState
+            icon={SearchX}
+            title="Belum ada lowongan yang cocok"
+            description="Coba ubah kata kunci atau filter Anda."
+          >
+            {filtered ? (
+              <Button variant="outline" asChild>
+                <Link href="/jobs">Atur ulang filter</Link>
+              </Button>
+            ) : null}
+          </EmptyState>
+        )}
+      </div>
     </div>
   );
 }

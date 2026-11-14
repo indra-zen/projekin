@@ -25,17 +25,25 @@ export function UserAvatar({
   name,
   username,
   className,
+  fallbackClassName,
 }: {
   path: string | null | undefined;
   name: string | null | undefined;
   username: string;
   className?: string;
+  /** Extra classes for the initials, for example a larger text size. */
+  fallbackClassName?: string;
 }) {
   const src = avatarUrl(path);
   return (
     <Avatar className={cn("size-10", className)}>
       {src ? <AvatarImage src={src} alt={name ?? username} /> : null}
-      <AvatarFallback className="bg-highlight text-foreground font-bold">
+      <AvatarFallback
+        className={cn(
+          "bg-highlight text-foreground font-bold",
+          fallbackClassName,
+        )}
+      >
         {initials(name, username)}
       </AvatarFallback>
     </Avatar>

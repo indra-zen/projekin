@@ -202,7 +202,7 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 | – | Border-cascade audit | Bare `border`/`divide-*` in pages are now 1 px **ink** lines (global default). Internal dividers (`divide-y`, `border-t`/`-b`, about 26 uses) move to `hairline` while each page is restyled (phases 3–6) | Deferred to pages |
 | 2 | Primitives | All `ui/*`, new `NativeSelect`, form primitives, StatusBadge, VerificationBadge, review stars, UserAvatar. `EmptyState` moved to Phase 5 where its 10 call sites are replaced | Done (2026-11-14) |
 | 3 | Shell | Brand, site header, footer, dashboard and admin navs, AuthCard, LegalPage | Done (2026-11-14) |
-| 4 | Public pages | Landing, `/services`, `/services/[id]`, `/services/[id]/order`, `/jobs`, `/jobs/[id]`, `/u/[username]` | — |
+| 4 | Public pages | Landing, `/services`, `/jobs`, `/u/[username]` (done 2026-11-14). `/services/[id]`, `/services/[id]/order` and `/jobs/[id]` are detail pages, not yet restyled | Done for the four listed pages |
 | 5 | Dashboard | Overview, orders list and detail, jobs, proposals, services, portfolio, earnings, verification, settings, freelancer; replace copied select styles | — |
 | 6 | Admin | All `/admin` pages and admin forms | — |
 | 7 | QA and handoff | Keyboard/focus pass, contrast check, reduced motion, 360 px sweep, docs, completion report | — |
@@ -232,3 +232,12 @@ Each phase is one commit on `feature/neo-brutal-ui`. After every phase run `npm 
 - Auth pages share `AuthCard`: decorative blobs and a dot grid sit behind a `shadow-hard-lg` card.
 - Legal pages: readable card with hairline-divided sections, body text in full ink and a 68-character measure.
 - Dashboard nav icons are now distinct (Store for services, Images for portfolio).
+
+### 8.5 Implementation notes (Phase 4)
+
+- New shared pieces: [`page-header.tsx`](../src/components/page-header.tsx) (lilac band with eyebrow, title, lead and an optional children slot for a search form), [`empty-state.tsx`](../src/components/empty-state.tsx) (moved forward from Phase 5), [`pagination.tsx`](../src/components/pagination.tsx), [`listing-skeleton.tsx`](../src/components/listing-skeleton.tsx) with `loading.tsx` for `/services` and `/jobs`, and `ledgeAt()` in [`src/lib/ledge.ts`](../src/lib/ledge.ts) for rotating ledge colours.
+- Listing cards: a category sticker, a price in the display font, delivery as a chip. Job cards: a mint budget tile and an orange deadline tile so money and time are never confused with category.
+- The landing page shows only real data (categories from the database). No sample listings or invented statistics.
+- The landing hero h1 breaks into three balanced lines at 1280 px (`text-balance`, marker on the last line); two lines at 768 px.
+- `ReviewList` items are now outlined cards (`bg-card`, `border-2`), which also restyles reviews on the order and service pages.
+- `UserAvatar` gained an optional `fallbackClassName` for large initials.

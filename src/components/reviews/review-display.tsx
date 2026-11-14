@@ -47,7 +47,10 @@ export function ReviewList({ reviews }: { reviews: ReviewItem[] }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {reviews.map((review) => (
-        <li key={review.id} className="bg-muted/50 min-w-0 rounded-xl p-4">
+        <li
+          key={review.id}
+          className="bg-card border-border min-w-0 rounded-xl border-2 p-4"
+        >
           <div className="flex items-center justify-between gap-2 text-sm">
             <span className="min-w-0 truncate font-semibold">
               {review.reviewer?.full_name ??
