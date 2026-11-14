@@ -12,6 +12,7 @@ const links: { href: Route; label: string }[] = [
   { href: "/admin/refunds" as Route, label: "Pengembalian dana" },
   { href: "/admin/payouts" as Route, label: "Pencairan" },
   { href: "/admin/moderation" as Route, label: "Moderasi" },
+  { href: "/admin/universities" as Route, label: "Kampus" },
 ];
 
 export function AdminNav() {

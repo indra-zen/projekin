@@ -109,6 +109,10 @@ export const reasonMessages: Record<string, string> = {
   ALREADY_REVIEWED: "Anda sudah memberikan ulasan untuk pesanan ini.",
   TOO_MANY_ATTACHMENTS: "Maksimal 10 lampiran per pengiriman.",
   ATTACHMENT_NOT_FOUND: "Lampiran tidak ditemukan. Unggah ulang file Anda.",
+  // Admin: university email domains
+  INVALID_EMAIL_DOMAIN:
+    "Domain email tidak valid. Tulis bagian setelah @, misalnya student.ppkia.ac.id.",
+  TOO_MANY_EMAIL_DOMAINS: "Maksimal 10 domain per kampus.",
   // Admin money operations (Phase 9)
   INVALID_RESOLUTION: "Pilih keputusan sengketa.",
   INVALID_ADMIN_NOTE: "Catatan admin wajib diisi (maksimal 2.000 karakter).",

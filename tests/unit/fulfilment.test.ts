@@ -429,3 +429,49 @@ describe("admin money actions (Phase 9)", () => {
     ).toMatchObject({ ok: false, error: { code: "VALIDATION_ERROR" } });
   });
 });
+
+describe("setUniversityDomainsAction", () => {
+  const UNI = "77777777-8888-4999-8aaa-bbbbbbbbbbbb";
+  const action = async () =>
+    (await import("@/server/actions/admin-universities"))
+      .setUniversityDomainsAction;
+
+  it("refuses non-admins", async () => {
+    const fake = signedIn({ isAdmin: false });
+    const result = await (
+      await action()
+    )(null, formData({ universityId: UNI, domains: "student.ppkia.ac.id" }));
+    expect(result).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("splits lines, commas and spaces and maps invalid domains", async () => {
+    const fake = signedIn({
+      isAdmin: true,
+      rpc: (_name, args) =>
+        (args as { p_domains: string[] }).p_domains.includes("bad")
+          ? {
+              data: null,
+              error: { code: "PJ422", message: "INVALID_EMAIL_DOMAIN" },
+            }
+          : { data: null, error: null },
+    });
+    const run = await action();
+    expect(
+      await run(
+        null,
+        formData({
+          universityId: UNI,
+          domains: "student.ppkia.ac.id\n mhs.ppkia.ac.id, x.ac.id",
+        }),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(fake.rpc).toHaveBeenCalledWith("admin_set_university_domains", {
+      p_university_id: UNI,
+      p_domains: ["student.ppkia.ac.id", "mhs.ppkia.ac.id", "x.ac.id"],
+    });
+    expect(
+      await run(null, formData({ universityId: UNI, domains: "bad" })),
+    ).toMatchObject({ ok: false, error: { reason: "INVALID_EMAIL_DOMAIN" } });
+  });
+});

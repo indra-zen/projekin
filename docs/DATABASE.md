@@ -871,6 +871,7 @@ Migrations live in `supabase/migrations/` (Supabase CLI, timestamped).
 | `20261114000200_align_order_file_limits.sql` (Copilot) | `order-files`: 25 MB, Office MIME types |
 | `20261114010000_qa_security_fixes.sql` | QA review: `SELECT` on reviews for `anon`; rating views and `service_listings` rating columns; drops the freelancer delete policy on `order-files`; `send_order_message` (BR-29, admins) and `create_order_review` (NULL rating, duplicate race) replaced; `private.storage_paths_owned` and `NOT VALID` checks on service cover and portfolio image paths. Applied to hosted dev on 2026-11-14 |
 | `20261114020000_admin_money_operations.sql` | Phase 9: `resolve_dispute`, `mark_refund_completed`, `mark_payout_paid` (admin only, `SECURITY DEFINER`); partial indexes for the refund and payout queues; `order-files` uploads capped at 50 objects per order (`private.order_file_count`). |
+| `20261114030000_admin_university_domains.sql` | `admin_set_university_domains(p_university_id, p_domains)` (admin only; trims, lower-cases, de-duplicates, validates the format, at most 10; matching stays exact). Pre-fills `student.ppkia.ac.id` for STMIK PPKIA (confirmed by the product owner). |
 
 The remaining tables follow this order as their phases arrive:
 
