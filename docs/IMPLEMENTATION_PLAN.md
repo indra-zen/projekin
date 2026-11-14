@@ -19,13 +19,14 @@
 | Portfolio & moderation (Phase 4 completion) | Done (Copilot, `a39ffa9`) | Portfolio CRUD, `set_freelancer_status`, `admin_set_service_block`, `portfolio` bucket. Its migration was committed with the same version as the jobs migration (`080800`), so `db push` skipped it; renamed to `080900` and applied to hosted dev by Claude Code (2026-11-13). `moderation.ts` adjusted for the generated `p_reason` type. |
 | Orders & payments (Phase 6) + completion | Done on `feature/auth-profiles` (Claude Code) | Migration `081000`: `payments`, `payment_notifications`, `order_deliveries`; RPCs `create_service_order`, `create_payment_attempt`, `attach_snap_token`, `fail_payment_attempt`, `apply_payment_status`, full `cancel_order` (BR-20), `expire_unpaid_orders` + `pg_cron` (every 5 min), `deliver_order` (message only), `complete_order`. Server: `src/server/payments/*` (sandbox-only config, Midtrans client, signature, status map, Snap builder, checkout, `syncAndApply`), admin client restricted by ESLint. Routes: `POST /api/payments/midtrans/notification`, `GET /api/cron/reconcile-payments` (+ `vercel.json`). UI: `/services/[id]/order`, order list filters and pagination, order detail with Snap payment panel (QRIS, GoPay, ShopeePay, bank VA), return-sync, payment history, deliver, confirm completion, cancel. Tests: `tests/db/payments.test.ts`, `tests/unit/payments.test.ts`, `tests/unit/payment-flow.test.ts`, `tests/components/payment-panel.test.tsx`. Applied to hosted dev; types regenerated. **Verified live (2026-11-13):** Snap create against the sandbox (201, token), Status API 404 handling, webhook on the real dev DB (forged → 401 logged, malformed → 400, signed unknown → 200 `not_found`), cron auth. **Manually verified by the product owner (2026-11-14, Chrome):** service order → VA payment → `in_progress` → deliver → confirm completion, and job flow hire → pay → job `filled`. Every other enabled method (QRIS, GoPay, ShopeePay, all VAs) was paid in the sandbox simulator by Claude Code (see §0.1). Follow-up `63d5cb5` added the sandbox payment guide, the tab-return status check, and fixed the on-load check under React StrictMode. |
 | Fulfilment & reviews (Phases 7–8) | Done (Copilot, `674e208`) + QA fixes (Claude Code) | Migrations `20261114000000`–`000200`: `order_messages`, `disputes`, `reviews`, `order-files` bucket; RPCs `send_order_message`, `request_order_revision`, `open_order_dispute`, `create_order_review`, `auto_complete_delivered_orders` (+ `pg_cron`, every 15 min). The milestone shipped without tests for these RPCs and policies; they were added in the QA review below (`tests/db/fulfilment.test.ts`). |
-| QA & security review (2026-11-14) | Done on `feature/auth-profiles` (Claude Code) | Full review of RLS, RPCs, grants, storage, actions, payments, webhook, secrets and UI. Fixed in migration `20261114010000_qa_security_fixes.sql` (applied to hosted dev with the product owner's approval; types regenerated): reviews were unreadable for signed-out visitors (anon had no `SELECT` grant); freelancers could delete already-delivered order files (dispute evidence); `send_order_message` accepted completed orders (BR-29) and refused admins; a NULL review rating surfaced as an internal error; service cover and portfolio image paths were not checked in direct PostgREST writes; the DATABASE §4.19 rating views were missing. App fixes: security headers (no framing protection at all before, ARCHITECTURE §12.1); `/services` filtered the category in JavaScript after `limit(24)` and had no pagination or sort (FR-SVC-05); profile ratings averaged only the latest 10 reviews and mixed freelancer and client reviews (FR-PROF-02); ratings missing from service detail and cards, proposal cards and the job page (FR-SVC-06, FR-REV-02; Phase 8 exit criterion); freelancers had no dispute form (BR-21); admins saw participant-only forms; the review form stayed after the 14-day window; delivery files used 1-hour inline signed URLs (now 60 s, download, created on click); dashboard header and `/jobs` filter layouts broke at 640–1023 px; past-the-end pages showed a load error; `deleteServiceAction` reported success when nothing was deleted. Tests: +41 (`tests/db/fulfilment.test.ts`, catalog checks in `tests/db/structure.test.ts`, `tests/unit/fulfilment.test.ts`, `tests/components/delivery-attachments.test.tsx`). |
-| Still open | Phase 9 / 10 | Admin dispute resolution, refunds/payouts queues and earnings (Phase 9; disputed orders cannot leave `disputed` until then), Playwright E2E, launch hardening (full CSP), and translating the landing page to Bahasa Indonesia |
+| QA & security review (2026-11-14) | Done on `feature/auth-profiles` (Claude Code) | Full review of RLS, RPCs, grants, storage, actions, payments, webhook, secrets and UI. Fixed in migration `20261114010000_qa_security_fixes.sql` (applied to hosted dev with the product owner's approval; types regenerated): reviews were unreadable for signed-out visitors (anon had no `SELECT` grant); freelancers could delete already-delivered order files (dispute evidence); `send_order_message` accepted completed orders (BR-29) and refused admins; a NULL review rating surfaced as an internal error; service cover and portfolio image paths were not checked in direct PostgREST writes; the DATABASE §4.19 rating views were missing. App fixes: security headers (no framing protection at all before, ARCHITECTURE §12.1); `/services` filtered the category in JavaScript after `limit(24)` and had no pagination or sort (FR-SVC-05); profile ratings averaged only the latest 10 reviews and mixed freelancer and client reviews (FR-PROF-02); ratings missing from service detail and cards, proposal cards and the job page (FR-SVC-06, FR-REV-02; Phase 8 exit criterion); freelancers had no dispute form (BR-21); admins saw participant-only forms; the review form stayed after the 14-day window; delivery files used 1-hour inline signed URLs (now 60 s, download, created on click); dashboard header and `/jobs` filter layouts broke at 640–1023 px; past-the-end pages showed a load error; `deleteServiceAction` reported success when nothing was deleted. Tests: +42 (`tests/db/fulfilment.test.ts`, catalog checks in `tests/db/structure.test.ts`, draft-only deletion in `tests/db/services.test.ts`, `tests/unit/fulfilment.test.ts`, `tests/components/delivery-attachments.test.tsx`). Handoff check in §0.2. |
+| Still open | Deployment & demo, Phase 9, Phase 10 | **Next: deployment and demo preparation** (product-owner decision, 2026-11-14; handoff in §0.2), ahead of Phase 9. Then admin dispute resolution, refund/payout queues and earnings (Phase 9; disputed orders cannot leave `disputed` until then), Playwright E2E, the remaining hardening (full CSP), and translating the landing page to Bahasa Indonesia |
 
 ### 0.1 Known issues
 
 - **Firefox on the product owner's machine did not run the page JavaScript** (the "Terima & rekrut" confirmation needs JS; plain form submissions still worked through progressive enhancement). A stock Firefox 159 (Playwright) and Chrome both run the flow correctly. The console warning "The execution of microtasks on this page was reordered…" also appears in the working Firefox and is harmless. Likely a local extension or setting. Not an app bug, but the JS-only disclosure could be swapped for `<details>` so the step also works without JS (optional hardening).
-- **Not yet manually verified:** reject, withdraw, close job, edit job, and order cancellation (covered by DB and unit tests only).
+- **Not yet manually verified:** reject, withdraw, close job, edit job, and order cancellation; and the Phase 7–8 flows as corrected in the QA review (messages, revision, dispute, attachment download, reviews both ways, ratings on every surface). They are covered by DB, unit and component tests only. Signed-in pages were checked as rendered markup with the compiled CSS, not in a real session (no test account on dev).
+- **The security headers postdate the last Snap popup payment.** `frame-ancestors 'none'` and `X-Frame-Options: DENY` only stop other sites from framing Projekin; Snap frames Midtrans inside our page, not the reverse, so no breakage is expected. No popup payment has run with them yet, so re-run §4.6 item 1 once deployed.
 - **Payment methods verified (2026-11-13).** The product owner paid VA orders end to end (§4.6 items 1–5). Claude Code then paid every enabled method in the sandbox simulator with our exact Snap request (QRIS, GoPay QRIS, ShopeePay QRIS on desktop; GoPay and ShopeePay deeplinks on a phone viewport; BCA, BNI, BRI, Permata, CIMB, Mandiri Bill and "other banks" VA) and confirmed each Status API answer (`settlement`, matching order ID, amount) maps to `paid` in our code, and that the Snap.js popup with our client key fires `onSuccess` for QR payments. Notes: QR payments (incl. GoPay/ShopeePay QR) report `payment_type = qris`; Snap does not notice VA payments and GoPay's phone simulator does not redirect back, so the order page re-checks when the user returns to the tab. The steps are in the README and in the order page's sandbox guide.
 - **Webhook needs a public URL.** Locally and on previews the order updates through return-sync ("Periksa status pembayaran", Snap callbacks, `?payment=finish`) and the daily reconcile cron. Set the Midtrans Notification URL once deployed.
 - **Fulfilment is implemented through Phase 7.** Delivery attachments, order messages, revision requests, disputes, and 3-day auto-completion are available. Admin dispute resolution remains in Phase 9.
@@ -43,15 +44,47 @@
 - **No favicon:** browsers log a 404 for `/favicon.ico` on the first visit.
 - **Changing the password from settings** does not ask for the current password (consider Supabase "Secure password change").
 
-### 0.2 Next steps after Phase 6
+### 0.2 Next steps (handoff after the QA review, 2026-11-14)
 
-1. **Payment milestone reviewed:** §4.6 items 1–3 and 6 pass in the sandbox (VA by the product owner; QR/e-wallet methods by Claude Code). Items 4–5 (expired attempt retry, auto-cancel after 24 h 15 min) are covered by database tests but not yet observed by hand.
-2. **Then Phase 7, fulfilment remainder** (GitHub Copilot is a good fit; the patterns are established): `order-files` bucket and policies + `private.can_upload_order_file` (DATABASE §6.2, §11), attachment upload in the delivery form (`deliver_order` already validates paths), `request_revision`, `order_messages`, `open_dispute`, `auto_complete_delivered_orders` + `pg_cron`. Rules that bit earlier phases:
-   - **Migration versions must be unique and later than `20261113081000`.** Check `ls supabase/migrations` before naming the file.
-   - `revoke all ... from anon, authenticated` **before** granting, on every new table and function (Supabase grants ALL by default).
-   - Database tests first (`tests/db/harness.ts`); every new reason needs an Indonesian message (enforced by `tests/unit/errors.test.ts`).
-   - After `npx supabase db push`, regenerate `src/types/database.ts`; never hand-edit it.
-3. **Phase 9** (admin refunds and payouts) closes the money loop for `refund_status`/`payout_status = 'pending'`.
+1. **QA milestone handoff check (Claude Code, 2026-11-14):**
+   - Started from a clean worktree at `546a03c`; the check added one DB test (draft-only deletion).
+   - Lint: 0 problems. Typecheck passes.
+   - `npm test`: 21 files, 307 tests pass (unit 163, DB 133, components 11).
+   - Production build passes.
+   - The Midtrans server key, Supabase secret key and cron secret appear in no git ref, tracked file or build output.
+   - `npm run format:check` still fails on the 5 Copilot files (§0.1).
+2. **Next milestone: deployment and demo preparation** (product-owner decision, ahead of Phase 9; suggested agent: GitHub Copilot). Settle these with the product owner first:
+   - **Which Supabase project backs the demo:**
+     - Option A: the existing dev project. It is already migrated, but it is shared with local development and previews (§6.3).
+     - Option B: a new project (ARCHITECTURE §14).
+     - Every `supabase db push` to a hosted project needs the product owner's explicit approval.
+   - **What gets deployed:**
+     - `feature/auth-profiles` has never been pushed, so CI has never run.
+     - Push it (with approval) and get both CI jobs green. The `migrations` job will apply every migration to a real Supabase stack for the first time.
+     - Get a review before merging to `main` (CLAUDE.md).
+   - **Demo data:** dev has no published services or open jobs.
+     - The demo needs accounts, a verified freelancer, services with covers and a job.
+     - Create them through the UI, or with a seed script the product owner approves (§4.4: tests that commit data never run against hosted projects).
+   - **Deployment steps** (ARCHITECTURE §14 and the README):
+     - Env vars per ARCHITECTURE §4.1, with `NEXT_PUBLIC_SITE_URL` set to the deployed origin.
+     - Supabase Auth: site URL, redirect URL `https://<domain>/auth/confirm`, and the token-hash email templates.
+     - The first admin, created with SQL.
+     - Midtrans Notification URL: `https://<domain>/api/payments/midtrans/notification`.
+     - On a newly migrated project, `select jobname, schedule from cron.job` must list `expire-unpaid-orders` (every 5 min) and `auto-complete-delivered-orders` (every 15 min). The README does not mention the second job yet.
+   - **Demo limits until Phase 9:**
+     - A disputed order cannot be resolved, so do not open one in the demo.
+     - Refunds (freelancer-cancelled paid orders) and payouts (completed orders) stay `pending` with no admin action.
+   - **Other demo constraints:**
+     - Supabase's built-in email sender is heavily rate-limited (PRD A5). Confirm the demo accounts beforehand, or configure SMTP.
+     - Free-plan projects pause when inactive.
+     - Visible gaps: the English landing page with sample listings (NFR-11), placeholder Terms and Privacy pages (PRD Q5: the product owner supplies the content), and no favicon.
+   - **On the deployed environment, run §4.6 items 1–4, 6, 10 and 11, and item 7 up to "payout pending".** This includes the first webhook delivery to a public URL, a Snap popup payment with the new headers (§0.1), and checking that signed-out visitors see ratings.
+3. **Then Phase 9** (dispute resolution, refund and payout queues, earnings), **then the rest of Phase 10** (CSP, accessibility pass, error states, Playwright E2E). Rules for new migrations:
+   - Use a unique version later than `20261114010000`.
+   - `revoke all … from anon, authenticated` before granting.
+   - Write database tests first (`tests/db/harness.ts`).
+   - Add an Indonesian message for every new reason.
+   - Regenerate `src/types/database.ts` after each push; never hand-edit it.
 
 ---
 
@@ -226,6 +259,8 @@ Exit: every money-affecting state can be closed out by an admin.
 
 ### Phase 10: Hardening and launch (≈ 3 days)
 
+**Status (2026-11-14):** the product owner moved deployment and demo preparation ahead of Phase 9 (§0.2). Tasks 5–7 are its deployment part. Tasks 1–4 remain. The QA review already covered much of task 1 and added the basic security headers, but not the full CSP of task 2.
+
 Tasks:
 1. Security review against the [risk register](ARCHITECTURE.md#122-risk-register). Run `/security-review`. Fix findings.
 2. CSP in Report-Only → tune for Snap and Supabase → enforce.
@@ -390,3 +425,4 @@ This section records the review of the five documents for contradictions and mis
 | 2026-11-13 | Copilot's `080800_portfolio_moderation.sql` renamed to `080900` (version collision; it had never been applied). | DATABASE §14 |
 | 2026-11-14 | Phase 7/8 RPC names as implemented: `send_order_message` (an RPC instead of a direct insert), `request_order_revision` (reason 10–2.000 characters), `open_order_dispute`, `create_order_review`. | DATABASE §7.2, §14; API_CONTRACT §4.0 |
 | 2026-11-14 | QA review: delivered order files are immutable (no delete policy); admins may post order messages; rating views added and `service_listings` gains `rating_avg`/`rating_count`; service cover and portfolio image paths are checked in the database; framing-protection and basic security headers ship now (the full CSP stays in Phase 10); order-file downloads use a 60-second download URL created on click with the viewer's session. | DATABASE §4.19, §7.2, §11.2, §14; API_CONTRACT §4.0, §5.1; ARCHITECTURE §12.1 |
+| 2026-11-14 | Deployment and demo preparation is the next milestone, ahead of Phase 9 (product owner). Until Phase 9 ships, disputes, refunds and payouts cannot be closed out by an admin. | IMPLEMENTATION_PLAN §0, §0.2, Phase 10 |

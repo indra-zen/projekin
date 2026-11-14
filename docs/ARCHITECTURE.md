@@ -477,10 +477,10 @@ L = likelihood, I = impact (H/M/L).
 
 ## 14. Deployment
 
-1. **Supabase (per environment):** create the project → `supabase link` → `supabase db push` (migrations, including the reference-data migration for categories and universities) → enable `pg_cron` → configure Auth (site URL, redirect URLs, email templates pointing at `/auth/confirm`, SMTP) → create the first admin with SQL (`insert into admin_users`).
+1. **Supabase (per environment):** create the project → `supabase link` → `supabase db push` (migrations, including the reference-data migration for categories and universities; they also enable `pg_cron` and schedule `expire-unpaid-orders` and `auto-complete-delivered-orders`, so check `select jobname, schedule from cron.job`) → configure Auth (site URL, redirect URLs, email templates pointing at `/auth/confirm`, SMTP) → create the first admin with SQL (`insert into admin_users`).
 2. **Vercel:** import the repo → set env vars per environment (§4.1) → set `CRON_SECRET` → deploy. `vercel.json` registers the cron.
 3. **Midtrans Sandbox dashboard:** copy the Server and Client keys → set the Payment Notification URL to production → (optional) set the Finish redirect URL (we also send `callbacks.finish` per transaction).
-4. **Release gate:** CI green (lint, typecheck, unit, pgTAP, build) → manual sandbox smoke test ([IMPLEMENTATION_PLAN §4.6](IMPLEMENTATION_PLAN.md#46-manual-sandbox-qa-checklist)).
+4. **Release gate:** CI green (`quality`: lint, typecheck, unit, component and PGlite DB tests, build; `migrations`: every migration applied to a real Supabase stack) → manual sandbox smoke test ([IMPLEMENTATION_PLAN §4.6](IMPLEMENTATION_PLAN.md#46-manual-sandbox-qa-checklist)).
 
 ---
 

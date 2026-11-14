@@ -202,3 +202,37 @@ describe("service visibility", () => {
     expect(await visible(anon, published)).toBe(0);
   });
 });
+
+describe("service deletion (deleteServiceAction: DELETE … RETURNING id)", () => {
+  const remove = (actor: Parameters<typeof as>[1], id: string, owner: string) =>
+    as(db, actor, (tx) =>
+      tx.query(
+        "delete from public.services where id = $1 and freelancer_id = $2 returning id",
+        [id, owner],
+      ),
+    );
+  const exists = async (id: string) =>
+    (await db.query("select 1 from public.services where id = $1", [id])).rows
+      .length === 1;
+
+  it("deletes only the owner's drafts; anything else returns zero rows", async () => {
+    const owner = await freelancer();
+    const stranger = await freelancer();
+    const draft = await createService(owner);
+    const published = await createService(owner);
+    await setStatus(owner, published, "published");
+
+    expect((await remove(user(stranger), draft, owner)).rows).toHaveLength(0);
+    expect(await exists(draft)).toBe(true);
+    await expectPgError(remove(anon, draft, owner), "42501");
+
+    // The action reports NOT_DRAFT for zero rows instead of a false success.
+    expect((await remove(user(owner), published, owner)).rows).toHaveLength(0);
+    expect(await exists(published)).toBe(true);
+
+    expect((await remove(user(owner), draft, owner)).rows).toEqual([
+      { id: draft },
+    ]);
+    expect(await exists(draft)).toBe(false);
+  });
+});
