@@ -1,0 +1,56 @@
+name: E2E
+
+# Read-only browser tests (e2e/) against the deployed site: after every
+# successful Vercel production deployment, and on demand from the Actions tab.
+# Signed-in tests need the demo-account secrets below; without them they are
+# skipped and only the public tests run.
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Site to test
+        default: https://projekin.vercel.app
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright against the deployed site
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url || 'https://projekin.vercel.app' }}
+      E2E_CLIENT_EMAIL: ${{ secrets.E2E_CLIENT_EMAIL }}
+      E2E_CLIENT_PASSWORD: ${{ secrets.E2E_CLIENT_PASSWORD }}
+      E2E_FREELANCER_EMAIL: ${{ secrets.E2E_FREELANCER_EMAIL }}
+      E2E_FREELANCER_PASSWORD: ${{ secrets.E2E_FREELANCER_PASSWORD }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
