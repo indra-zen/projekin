@@ -128,6 +128,10 @@ node scripts/seed-demo/seed.mjs --remote --wipe        # DELETES every account, 
 
 The data goes through the app's own database functions as each user, so every business rule applies; only Midtrans is simulated (paid orders receive a `settlement` status). The run aborts and rolls back if any timestamp is in the future or any story is out of order. The remote run needs the linked Supabase CLI and `SUPABASE_SECRET_KEY`, keeps universities and categories, and writes the new logins (one shared password; set `DEMO_PASSWORD` to choose it) to `.demo-accounts`. Production shares this database, so run it only when you mean to reset the live demo. The two unpaid orders expire 24 hours after the run (the cron cancels them), as real ones would.
 
+### Link previews
+
+Shared links (WhatsApp, Facebook, X, LinkedIn, Telegram) show the title, description and `src/app/opengraph-image.jpg`, a 1200×630 screenshot of the home page, from the Open Graph metadata in `src/app/layout.tsx`. After a visible change to the home page, regenerate the picture with `node scripts/og-image.mjs` (set `OG_SOURCE_URL` to capture a local server instead of the live site). Platforms cache previews: re-scrape with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/); WhatsApp refreshes after a while or for a URL it has not seen (e.g. with `?v=2`).
+
 ### Demo video
 
 `scripts/demo-video/record.mjs` records the whole service flow on the live site as one take at 1920×1080, with a visible pointer, typing, Indonesian captions and title cards: Budi orders Rina's logo service, pays with GoPay QRIS through the Midtrans Sandbox simulator, Rina delivers a file, Budi approves and reviews, the admin records the payout, and Rina sees her earnings.

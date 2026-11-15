@@ -9,6 +9,35 @@ test.describe("public pages", () => {
     await expect(main.locator('a[href="/jobs"]').first()).toBeVisible();
   });
 
+  test("landing page has a link preview", async ({ page }) => {
+    await open(page, "/");
+    const meta = (key: string) =>
+      page
+        .locator(`head meta[property="${key}"], head meta[name="${key}"]`)
+        .first()
+        .getAttribute("content");
+
+    expect(await meta("og:title")).toContain("Projekin");
+    expect(await meta("og:description")).toBeTruthy();
+    expect(await meta("twitter:card")).toBe("summary_large_image");
+    expect(await meta("og:image:width")).toBe("1200");
+    expect(await meta("og:image:height")).toBe("630");
+
+    const image = await meta("og:image");
+    expect(image, "og:image must be an absolute URL").toMatch(/^https?:\/\//);
+    const imageUrl = new URL(image!);
+    const site = new URL(page.url());
+    // A local build names the default port, not the test port; a deployed
+    // site must name its own domain, or crawlers fetch the wrong host.
+    if (site.hostname !== "localhost")
+      expect(imageUrl.origin).toBe(site.origin);
+    const { pathname, search } = imageUrl;
+    const response = await page.request.get(pathname + search);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("image/jpeg");
+    expect((await response.body()).length).toBeLessThan(300 * 1024);
+  });
+
   test("service catalog opens a service and its freelancer", async ({
     page,
   }) => {
