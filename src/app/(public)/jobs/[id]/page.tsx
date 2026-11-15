@@ -15,6 +15,7 @@ import {
   proposalReasonLabels,
   proposalStatusLabels,
 } from "@/lib/labels";
+import { pagePreview, previewDescription } from "@/lib/site-metadata";
 import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/validation/common";
 import { getVerificationStatus, getViewer } from "@/server/auth";
@@ -32,11 +33,24 @@ const loadJob = cache(async (id: string) => {
   return data;
 });
 
+/** Link preview when a job URL is shared (WhatsApp, Facebook, X, ...). */
 export async function generateMetadata({
   params,
 }: PageProps<"/jobs/[id]">): Promise<Metadata> {
   const job = await loadJob((await params).id);
-  return { title: job?.title ?? "Lowongan tidak ditemukan" };
+  if (!job) return { title: "Lowongan tidak ditemukan" };
+  return pagePreview({
+    title: job.title,
+    description: previewDescription(
+      [
+        job.status === "open" ? "Lowongan" : jobStatusLabels[job.status],
+        job.category?.name,
+        `Anggaran ${formatBudgetRange(job.budget_min, job.budget_max)}`,
+        job.deadline && `tenggat ${formatDate(job.deadline)}`,
+      ],
+      job.description,
+    ),
+  });
 }
 
 async function ProposalPanel({

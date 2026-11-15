@@ -9,11 +9,7 @@ import { env } from "@/lib/env";
 import { formatIdr } from "@/lib/format";
 import { publicObjectUrl, SERVICE_MEDIA_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
-import {
-  BASE_OPEN_GRAPH,
-  excerpt,
-  SITE_PREVIEW_IMAGE,
-} from "@/lib/site-metadata";
+import { pagePreview, previewDescription } from "@/lib/site-metadata";
 import { uuidSchema } from "@/lib/validation/common";
 
 // One query per request for both the page and its metadata. RLS: published
@@ -38,47 +34,28 @@ export async function generateMetadata({
   if (!service) return { title: "Layanan tidak ditemukan" };
 
   const title = service.title ?? "Layanan";
-  const facts = [
-    service.price != null ? formatIdr(service.price) : null,
-    service.delivery_days != null
-      ? `${service.delivery_days} hari pengerjaan`
-      : null,
-    service.freelancer_name ? `oleh ${service.freelancer_name}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const description = excerpt(
-    [facts, service.description].filter(Boolean).join(". "),
-    200,
-  );
-  const image = service.cover_image_path
-    ? {
-        url: publicObjectUrl(
-          env.NEXT_PUBLIC_SUPABASE_URL,
-          SERVICE_MEDIA_BUCKET,
-          service.cover_image_path,
-        ),
-        alt: `Sampul layanan: ${title}`,
-      }
-    : SITE_PREVIEW_IMAGE;
-
-  return {
+  return pagePreview({
     title,
-    description,
-    openGraph: {
-      ...BASE_OPEN_GRAPH,
-      type: "website",
-      title,
-      description,
-      images: [image],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-  };
+    description: previewDescription(
+      [
+        service.price != null && formatIdr(service.price),
+        service.delivery_days != null &&
+          `${service.delivery_days} hari pengerjaan`,
+        service.freelancer_name && `oleh ${service.freelancer_name}`,
+      ],
+      service.description,
+    ),
+    image: service.cover_image_path
+      ? {
+          url: publicObjectUrl(
+            env.NEXT_PUBLIC_SUPABASE_URL,
+            SERVICE_MEDIA_BUCKET,
+            service.cover_image_path,
+          ),
+          alt: `Sampul layanan: ${title}`,
+        }
+      : undefined,
+  });
 }
 
 export default async function ServiceDetailPage({

@@ -6,7 +6,12 @@ import {
 } from "@/lib/auth/routes";
 import { getCapabilities, isVerifiedStudent } from "@/lib/capabilities";
 import { isoDateInMonths } from "@/lib/format";
-import { excerpt } from "@/lib/site-metadata";
+import {
+  excerpt,
+  pagePreview,
+  previewDescription,
+  SITE_PREVIEW_IMAGE,
+} from "@/lib/site-metadata";
 import {
   DOCUMENT_TYPES,
   IMAGE_TYPES,
@@ -221,5 +226,61 @@ describe("excerpt (link-preview descriptions)", () => {
 
   it("cuts a single long word", () => {
     expect(excerpt("a".repeat(30), 10)).toBe(`${"a".repeat(9)}…`);
+  });
+});
+
+describe("previewDescription", () => {
+  it("joins facts with dots and texts with full stops, skipping blanks", () => {
+    expect(
+      previewDescription(
+        ["Lowongan", null, "Anggaran Rp 800.000", false, undefined],
+        "Kami butuh strategi konten.  ",
+        "",
+        null,
+      ),
+    ).toBe("Lowongan · Anggaran Rp 800.000. Kami butuh strategi konten");
+  });
+
+  it("does not double full stops and stays within 200 characters", () => {
+    const result = previewDescription(["A"], "Kalimat. ", "x ".repeat(200));
+    expect(result.startsWith("A. Kalimat. x x")).toBe(true);
+    expect(result.length).toBeLessThanOrEqual(200);
+    expect(result.endsWith("…")).toBe(true);
+  });
+});
+
+describe("pagePreview", () => {
+  it("uses the site picture and a wide card by default", () => {
+    const meta = pagePreview({ title: "Judul", description: "Isi" });
+    expect(meta.title).toBe("Judul");
+    expect(meta.openGraph).toMatchObject({
+      type: "website",
+      siteName: "Projekin",
+      locale: "id_ID",
+      title: "Judul",
+      description: "Isi",
+      images: [SITE_PREVIEW_IMAGE],
+    });
+    expect(meta.twitter).toMatchObject({
+      card: "summary_large_image",
+      images: [SITE_PREVIEW_IMAGE],
+    });
+  });
+
+  it("marks profiles and shows avatars as a small square", () => {
+    const image = { url: "https://example.com/a.png", alt: "Foto" };
+    const meta = pagePreview({
+      title: "Rina",
+      description: "Freelancer",
+      image,
+      square: true,
+      profileUsername: "rina",
+    });
+    expect(meta.openGraph).toMatchObject({
+      type: "profile",
+      username: "rina",
+      images: [image],
+    });
+    expect(meta.twitter).toMatchObject({ card: "summary", images: [image] });
   });
 });
