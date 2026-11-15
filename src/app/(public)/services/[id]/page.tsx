@@ -1,6 +1,7 @@
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { UserAvatar } from "@/components/profile/user-avatar";
 import { RatingSummary, ReviewList } from "@/components/reviews/review-display";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,77 @@ import { env } from "@/lib/env";
 import { formatIdr } from "@/lib/format";
 import { publicObjectUrl, SERVICE_MEDIA_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import {
+  BASE_OPEN_GRAPH,
+  excerpt,
+  SITE_PREVIEW_IMAGE,
+} from "@/lib/site-metadata";
 import { uuidSchema } from "@/lib/validation/common";
+
+// One query per request for both the page and its metadata. RLS: published
+// services of eligible freelancers (or the viewer's own).
+const loadService = cache(async (id: string) => {
+  if (!uuidSchema.safeParse(id).success) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("service_listings")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data?.freelancer_id) return null;
+  return { ...data, freelancer_id: data.freelancer_id };
+});
+
+/** Link preview when a service URL is shared (WhatsApp, Facebook, X, ...). */
+export async function generateMetadata({
+  params,
+}: PageProps<"/services/[id]">): Promise<Metadata> {
+  const service = await loadService((await params).id);
+  if (!service) return { title: "Layanan tidak ditemukan" };
+
+  const title = service.title ?? "Layanan";
+  const facts = [
+    service.price != null ? formatIdr(service.price) : null,
+    service.delivery_days != null
+      ? `${service.delivery_days} hari pengerjaan`
+      : null,
+    service.freelancer_name ? `oleh ${service.freelancer_name}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const description = excerpt(
+    [facts, service.description].filter(Boolean).join(". "),
+    200,
+  );
+  const image = service.cover_image_path
+    ? {
+        url: publicObjectUrl(
+          env.NEXT_PUBLIC_SUPABASE_URL,
+          SERVICE_MEDIA_BUCKET,
+          service.cover_image_path,
+        ),
+        alt: `Sampul layanan: ${title}`,
+      }
+    : SITE_PREVIEW_IMAGE;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      ...BASE_OPEN_GRAPH,
+      type: "website",
+      title,
+      description,
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
 
 export default async function ServiceDetailPage({
   params,
@@ -16,14 +87,9 @@ export default async function ServiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  if (!uuidSchema.safeParse(id).success) notFound();
+  const service = await loadService(id);
+  if (!service) notFound();
   const supabase = await createClient();
-  const { data: service } = await supabase
-    .from("service_listings")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (!service || !service.freelancer_id) notFound();
 
   // FR-SVC-06: rating summary and the latest reviews from this service's orders.
   const [{ data: portfolio }, { data: reviews }, { data: freelancerStats }] =

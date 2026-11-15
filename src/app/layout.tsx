@@ -3,6 +3,13 @@ import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
 import "@/app/globals.css";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { env } from "@/lib/env";
+import {
+  BASE_OPEN_GRAPH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+} from "@/lib/site-metadata";
 
 const font = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -20,12 +27,32 @@ const display = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for the link-preview image. Without NEXT_PUBLIC_SITE_URL,
+  // Next.js uses the Vercel production domain (or localhost in development).
+  metadataBase: env.NEXT_PUBLIC_SITE_URL
+    ? new URL(env.NEXT_PUBLIC_SITE_URL)
+    : undefined,
+  applicationName: SITE_NAME,
   title: {
-    default: "Projekin — Talenta mahasiswa, hasil nyata",
+    default: SITE_TITLE,
     template: "%s — Projekin",
   },
-  description:
-    "Temukan talenta mahasiswa tepercaya untuk proyek Anda, atau ubah keahlian Anda menjadi penghasilan.",
+  description: SITE_DESCRIPTION,
+  // Link previews (WhatsApp, Facebook, X, LinkedIn, Telegram). The picture is
+  // app/opengraph-image.jpg (regenerate with scripts/og-image.mjs). No og:url:
+  // pages inherit this block, and a fixed og:url would make every shared page
+  // point at the home page. Service pages have their own (services/[id]).
+  openGraph: {
+    ...BASE_OPEN_GRAPH,
+    type: "website",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
