@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/routes";
 import { getCapabilities, isVerifiedStudent } from "@/lib/capabilities";
 import { isoDateInMonths } from "@/lib/format";
+import { excerpt } from "@/lib/site-metadata";
 import {
   DOCUMENT_TYPES,
   IMAGE_TYPES,
@@ -194,5 +195,31 @@ describe("format", () => {
     expect(isoDateInMonths(12, new Date("2026-11-13T00:00:00Z"))).toBe(
       "2027-11-13",
     );
+  });
+});
+
+describe("excerpt (link-preview descriptions)", () => {
+  it("keeps short text and collapses whitespace", () => {
+    expect(excerpt("  Logo\n\nprofesional   untuk UMKM ", 50)).toBe(
+      "Logo profesional untuk UMKM",
+    );
+  });
+
+  it("cuts long text at a word boundary with an ellipsis", () => {
+    const text =
+      "Logo yang mudah diingat dan sesuai karakter usaha Anda, dengan tiga konsep awal.";
+    const result = excerpt(text, 40);
+    expect(result.length).toBeLessThanOrEqual(40);
+    expect(result).toBe("Logo yang mudah diingat dan sesuai…");
+  });
+
+  it("drops trailing punctuation before the ellipsis", () => {
+    expect(excerpt("Rp 350.000 · 4 hari. Desain logo profesional", 22)).toBe(
+      "Rp 350.000 · 4 hari…",
+    );
+  });
+
+  it("cuts a single long word", () => {
+    expect(excerpt("a".repeat(30), 10)).toBe(`${"a".repeat(9)}…`);
   });
 });

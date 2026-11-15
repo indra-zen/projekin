@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, open, test } from "./fixtures";
 
 test.describe("public pages", () => {
@@ -9,33 +10,67 @@ test.describe("public pages", () => {
     await expect(main.locator('a[href="/jobs"]').first()).toBeVisible();
   });
 
-  test("landing page has a link preview", async ({ page }) => {
-    await open(page, "/");
-    const meta = (key: string) =>
+  // Next.js streams a dynamic page's metadata into <body> for browsers and
+  // puts it in <head> only for known crawlers, so these tests are one.
+  test.describe("link previews, as WhatsApp's crawler sees them", () => {
+    test.use({ userAgent: "WhatsApp/2.23.20.0 A" });
+
+    const meta = (page: Page, key: string) =>
       page
         .locator(`head meta[property="${key}"], head meta[name="${key}"]`)
         .first()
-        .getAttribute("content");
+        .getAttribute("content", { timeout: 5_000 });
 
-    expect(await meta("og:title")).toContain("Projekin");
-    expect(await meta("og:description")).toBeTruthy();
-    expect(await meta("twitter:card")).toBe("summary_large_image");
-    expect(await meta("og:image:width")).toBe("1200");
-    expect(await meta("og:image:height")).toBe("630");
+    test("landing page has a link preview", async ({ page }) => {
+      await open(page, "/");
 
-    const image = await meta("og:image");
-    expect(image, "og:image must be an absolute URL").toMatch(/^https?:\/\//);
-    const imageUrl = new URL(image!);
-    const site = new URL(page.url());
-    // A local build names the default port, not the test port; a deployed
-    // site must name its own domain, or crawlers fetch the wrong host.
-    if (site.hostname !== "localhost")
-      expect(imageUrl.origin).toBe(site.origin);
-    const { pathname, search } = imageUrl;
-    const response = await page.request.get(pathname + search);
-    expect(response.status()).toBe(200);
-    expect(response.headers()["content-type"]).toBe("image/jpeg");
-    expect((await response.body()).length).toBeLessThan(300 * 1024);
+      expect(await meta(page, "og:title")).toContain("Projekin");
+      expect(await meta(page, "og:description")).toBeTruthy();
+      expect(await meta(page, "twitter:card")).toBe("summary_large_image");
+      expect(await meta(page, "og:image:width")).toBe("1200");
+      expect(await meta(page, "og:image:height")).toBe("630");
+
+      const image = await meta(page, "og:image");
+      expect(image, "og:image must be an absolute URL").toMatch(/^https?:\/\//);
+      const imageUrl = new URL(image!);
+      const site = new URL(page.url());
+      // A local build names the default port, not the test port; a deployed
+      // site must name its own domain, or crawlers fetch the wrong host.
+      if (site.hostname !== "localhost")
+        expect(imageUrl.origin).toBe(site.origin);
+      const { pathname, search } = imageUrl;
+      const response = await page.request.get(pathname + search);
+      expect(response.status()).toBe(200);
+      expect(response.headers()["content-type"]).toBe("image/jpeg");
+      expect((await response.body()).length).toBeLessThan(300 * 1024);
+    });
+
+    test("a service page has its own link preview", async ({ page }) => {
+      await open(page, "/services");
+      const card = page
+        .locator('main a[href^="/services/"]:not([href$="/order"])')
+        .first();
+      test.skip((await card.count()) === 0, "no published services");
+      await open(page, (await card.getAttribute("href"))!);
+
+      const heading = (await page.locator("main h1").first().textContent())!;
+
+      expect(await meta(page, "og:title")).toBe(heading.trim());
+      await expect(page).toHaveTitle(`${heading.trim()} — Projekin`);
+      expect(await meta(page, "og:description")).toMatch(/^Rp\s?[\d.]+ · /);
+      expect(await meta(page, "twitter:card")).toBe("summary_large_image");
+
+      // The cover (Supabase Storage) or the site picture; either must load.
+      const image = (await meta(page, "og:image"))!;
+      expect(image).toMatch(/^https?:\/\//);
+      const url = new URL(image);
+      const sameSite = url.pathname.startsWith("/opengraph-image");
+      const response = await page.request.get(
+        sameSite ? url.pathname + url.search : image,
+      );
+      expect(response.status()).toBe(200);
+      expect(response.headers()["content-type"]).toMatch(/^image\//);
+    });
   });
 
   test("service catalog opens a service and its freelancer", async ({

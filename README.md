@@ -130,7 +130,7 @@ The data goes through the app's own database functions as each user, so every bu
 
 ### Link previews
 
-Shared links (WhatsApp, Facebook, X, LinkedIn, Telegram) show the title, description and `src/app/opengraph-image.jpg`, a 1200×630 screenshot of the home page, from the Open Graph metadata in `src/app/layout.tsx`. After a visible change to the home page, regenerate the picture with `node scripts/og-image.mjs` (set `OG_SOURCE_URL` to capture a local server instead of the live site). Platforms cache previews: re-scrape with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/); WhatsApp refreshes after a while or for a URL it has not seen (e.g. with `?v=2`).
+Shared links (WhatsApp, Facebook, X, LinkedIn, Telegram) show the title, description and `src/app/opengraph-image.jpg`, a 1200×630 screenshot of the home page, from the Open Graph metadata in `src/app/layout.tsx`. A service link shows the service's own title, price, delivery time, freelancer and cover (`generateMetadata` in `src/app/(public)/services/[id]/page.tsx`). After a visible change to the home page, regenerate the picture with `node scripts/og-image.mjs` (set `OG_SOURCE_URL` to capture a local server instead of the live site). Platforms cache previews: re-scrape with the [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/); WhatsApp refreshes after a while or for a URL it has not seen (e.g. with `?v=2`).
 
 ### Demo video
 
