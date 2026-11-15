@@ -24,6 +24,63 @@ export const BASE_OPEN_GRAPH = {
   locale: "id_ID",
 } satisfies Metadata["openGraph"];
 
+type PreviewImage = {
+  url: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  type?: string;
+};
+
+/**
+ * Title, description and link preview for a page with its own content
+ * (service, job, profile). `square` is for a portrait-like picture such as an
+ * avatar: platforms then show a small thumbnail beside the text instead of a
+ * wide banner. `profileUsername` marks the page as an Open Graph profile.
+ */
+export function pagePreview({
+  title,
+  description,
+  image = SITE_PREVIEW_IMAGE,
+  square = false,
+  profileUsername,
+}: {
+  title: string;
+  description: string;
+  image?: PreviewImage;
+  square?: boolean;
+  profileUsername?: string;
+}): Metadata {
+  const shared = { ...BASE_OPEN_GRAPH, title, description, images: [image] };
+  return {
+    title,
+    description,
+    openGraph: profileUsername
+      ? { ...shared, type: "profile", username: profileUsername }
+      : { ...shared, type: "website" },
+    twitter: {
+      card: square ? "summary" : "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  };
+}
+
+/**
+ * "fact · fact · fact. Text. More text…" in at most 200 characters: the key
+ * facts first (what fits in the shortest previews), then free text.
+ */
+export function previewDescription(
+  facts: (string | null | undefined | false)[],
+  ...texts: (string | null | undefined)[]
+): string {
+  const parts = [facts.filter(Boolean).join(" · "), ...texts]
+    .map((part) => (part ?? "").replace(/\s+/g, " ").replace(/[\s.]+$/, ""))
+    .filter(Boolean);
+  return excerpt(parts.join(". "), 200);
+}
+
 /** Collapses whitespace and cuts at a word boundary, ending with "…". */
 export function excerpt(text: string, max: number): string {
   const flat = text.replace(/\s+/g, " ").trim();

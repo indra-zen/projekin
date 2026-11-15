@@ -12,7 +12,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { UserAvatar } from "@/components/profile/user-avatar";
+import { avatarUrl, UserAvatar } from "@/components/profile/user-avatar";
 import { RatingSummary, ReviewList } from "@/components/reviews/review-display";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { VerifiedStudentBadge } from "@/components/verification/verification-bad
 import { isVerifiedStudent } from "@/lib/capabilities";
 import { formatDate, formatIdr } from "@/lib/format";
 import { ledgeAt } from "@/lib/ledge";
+import { pagePreview, previewDescription } from "@/lib/site-metadata";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { USERNAME_PATTERN } from "@/lib/validation/common";
@@ -116,11 +117,34 @@ export async function generateMetadata({
 }: PageProps<"/u/[username]">): Promise<Metadata> {
   const { username } = await params;
   const data = await loadProfile(username);
-  return {
-    title: data
-      ? (data.profile.full_name ?? data.profile.username)
-      : "Profil tidak ditemukan",
-  };
+  if (!data) return { title: "Profil tidak ditemukan" };
+
+  // Only what the public page shows: freelancer details for verified
+  // students, otherwise the location and bio.
+  const { profile, freelancer, services, reviewGroups } = data;
+  const name = profile.full_name ?? `@${profile.username}`;
+  const verified = isVerifiedStudent(freelancer);
+  const rating = reviewGroups.find((g) => g.key === "freelancer");
+  const avatar = avatarUrl(profile.avatar_path);
+  return pagePreview({
+    title: name,
+    description: verified
+      ? previewDescription(
+          [
+            "Freelancer mahasiswa terverifikasi",
+            freelancer?.university?.short_name ?? freelancer?.university?.name,
+            rating &&
+              `★ ${rating.avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} (${rating.count} ulasan)`,
+            services.length > 0 && `${services.length} layanan`,
+          ],
+          freelancer?.headline,
+          profile.bio,
+        )
+      : previewDescription(["Anggota Projekin", profile.location], profile.bio),
+    image: avatar ? { url: avatar, alt: `Foto profil ${name}` } : undefined,
+    square: Boolean(avatar),
+    profileUsername: profile.username,
+  });
 }
 
 function SectionTitle({

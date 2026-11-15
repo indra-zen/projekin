@@ -21,6 +21,20 @@ test.describe("public pages", () => {
         .first()
         .getAttribute("content", { timeout: 5_000 });
 
+    /** og:image is absolute and loads (site picture or Supabase Storage). */
+    async function expectPreviewImageLoads(page: Page) {
+      const image = (await meta(page, "og:image"))!;
+      expect(image).toMatch(/^https?:\/\//);
+      const url = new URL(image);
+      const sameSite = url.pathname.startsWith("/opengraph-image");
+      const response = await page.request.get(
+        sameSite ? url.pathname + url.search : image,
+      );
+      expect(response.status()).toBe(200);
+      expect(response.headers()["content-type"]).toMatch(/^image\//);
+      return image;
+    }
+
     test("landing page has a link preview", async ({ page }) => {
       await open(page, "/");
 
@@ -61,15 +75,52 @@ test.describe("public pages", () => {
       expect(await meta(page, "twitter:card")).toBe("summary_large_image");
 
       // The cover (Supabase Storage) or the site picture; either must load.
-      const image = (await meta(page, "og:image"))!;
-      expect(image).toMatch(/^https?:\/\//);
-      const url = new URL(image);
-      const sameSite = url.pathname.startsWith("/opengraph-image");
-      const response = await page.request.get(
-        sameSite ? url.pathname + url.search : image,
+      await expectPreviewImageLoads(page);
+    });
+
+    test("a job page has its own link preview", async ({ page }) => {
+      await open(page, "/jobs");
+      const link = page.locator('main a[href^="/jobs/"]').first();
+      test.skip((await link.count()) === 0, "no visible jobs");
+      await open(page, (await link.getAttribute("href"))!);
+
+      const heading = (await page.locator("main h1").first().textContent())!;
+      expect(await meta(page, "og:title")).toBe(heading.trim());
+      await expect(page).toHaveTitle(`${heading.trim()} — Projekin`);
+      expect(await meta(page, "og:description")).toMatch(
+        /^(Lowongan|Menunggu pembayaran|Terisi|Ditutup) · .*Anggaran Rp/,
       );
-      expect(response.status()).toBe(200);
-      expect(response.headers()["content-type"]).toMatch(/^image\//);
+      expect(await meta(page, "twitter:card")).toBe("summary_large_image");
+      await expectPreviewImageLoads(page);
+    });
+
+    test("a freelancer profile has its own link preview", async ({ page }) => {
+      await open(page, "/services");
+      const card = page
+        .locator('main a[href^="/services/"]:not([href$="/order"])')
+        .first();
+      test.skip((await card.count()) === 0, "no published services");
+      await open(page, (await card.getAttribute("href"))!);
+      // A published service's owner is a verified student.
+      await open(
+        page,
+        (await page
+          .locator('main a[href^="/u/"]')
+          .first()
+          .getAttribute("href"))!,
+      );
+
+      const heading = (await page.locator("main h1").first().textContent())!;
+      expect(await meta(page, "og:title")).toBe(heading.trim());
+      expect(await meta(page, "og:type")).toBe("profile");
+      expect(await meta(page, "og:description")).toMatch(
+        /^Freelancer mahasiswa terverifikasi · /,
+      );
+      // An avatar is a small square card; without one, the wide site picture.
+      const image = await expectPreviewImageLoads(page);
+      expect(await meta(page, "twitter:card")).toBe(
+        image.includes("/avatars/") ? "summary" : "summary_large_image",
+      );
     });
   });
 
