@@ -128,6 +128,19 @@ node scripts/seed-demo/seed.mjs --remote --wipe        # DELETES every account, 
 
 The data goes through the app's own database functions as each user, so every business rule applies; only Midtrans is simulated (paid orders receive a `settlement` status). The run aborts and rolls back if any timestamp is in the future or any story is out of order. The remote run needs the linked Supabase CLI and `SUPABASE_SECRET_KEY`, keeps universities and categories, and writes the new logins (one shared password; set `DEMO_PASSWORD` to choose it) to `.demo-accounts`. Production shares this database, so run it only when you mean to reset the live demo. The two unpaid orders expire 24 hours after the run (the cron cancels them), as real ones would.
 
+### Demo video
+
+`scripts/demo-video/record.mjs` records the whole service flow on the live site as one take at 1920×1080, with a visible pointer, typing, Indonesian captions and title cards: Budi orders Rina's logo service, pays with GoPay QRIS through the Midtrans Sandbox simulator, Rina delivers a file, Budi approves and reviews, the admin records the payout, and Rina sees her earnings.
+
+```bash
+node scripts/demo-video/record.mjs --yes              # the real take (about 2.5 minutes)
+node scripts/demo-video/record.mjs --yes --rehearsal  # same story with Maya and Nurul
+FFMPEG=/path/to/ffmpeg node scripts/demo-video/finish.mjs scripts/demo-video/out/raw-final.webm \
+  --start 0.9 --music track.mp3                       # MP4 with background music
+```
+
+Every take creates a real, completed order (paid in Sandbox) in the database behind `DEMO_BASE_URL` (default production, which shares the demo database), so it needs `--yes`. Logins come from `.demo-accounts`. Output goes to the git-ignored `scripts/demo-video/out/`: `projekin-demo.webm` always (Playwright's bundled ffmpeg), plus `projekin-demo.mp4` when `FFMPEG` points to a full ffmpeg build. A client can only have one unpaid order per service, so a failed take may need its unpaid order cancelled before the next one.
+
 ## Contributing
 
 Read [`CLAUDE.md`](CLAUDE.md) and [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) before starting work.
